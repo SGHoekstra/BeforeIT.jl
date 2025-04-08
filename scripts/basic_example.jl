@@ -9,9 +9,13 @@ using FileIO, Plots
 # We then initialise the model loading some precomputed set of parameters and by specifying a number of epochs.
 # In another tutorial we will illustrate how to compute parameters and initial conditions.
 
-parameters = Bit.AUSTRIA2010Q1.parameters
-initial_conditions = Bit.AUSTRIA2010Q1.initial_conditions
+year_i = 2010
+quarter = 4
 
+parameters = load(pwd() * "/src/utils/parameters_initial_conditions_data/netherlands/parameters/"* string(year_i) *"Q"* string(quarter) *".jld2");
+initial_conditions = load(pwd() * "/src/utils/parameters_initial_conditions_data/netherlands/initial_conditions/"* string(year_i) *"Q"* string(quarter) *".jld2");
+
+# To run mu
 # We can now initialise the model, by specifying in advance the maximum number of epochs.
 
 T = 16

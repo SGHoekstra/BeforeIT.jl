@@ -24,3 +24,9 @@ initial_conditions =
     matread(joinpath(dir, "parameters_initial_conditions_data/steady_state/initial_conditions/2010Q1.mat"))
 
 const STEADY_STATE2010Q1 = InitialState(parameters, initial_conditions)
+
+parameters = load(joinpath(dir, "parameters_initial_conditions_data/netherlands/parameters/2010Q1.jld2"))
+initial_conditions = load(joinpath(dir, "parameters_initial_conditions_data/netherlands/initial_conditions/2010Q1.jld2"))
+
+const NETHERLANDS2010Q1 = InitialState(parameters, initial_conditions)
+
