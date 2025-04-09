@@ -932,7 +932,6 @@ function get_params_and_initial_conditions_netherlands(calibration_object, calib
 
 
     timescale=data["nominal_gdp_quarterly"][T_calibration_exo]/(sum(compensation_employees+operating_surplus+capital_consumption+taxes_production+taxes_products)+taxes_products_household+taxes_products_capitalformation_dwellings+taxes_products_government+taxes_products_export);
-    scale=1/10000;
     r_bar = (data["euribor"][T_calibration_exo] .+ 1.0) .^ (1.0 / 4.0) .- 1
 
     omega = 0.85

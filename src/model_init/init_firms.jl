@@ -75,6 +75,7 @@ function init_firms(parameters, initial_conditions; typeInt = Int64, typeFloat =
 
     Y_i = alpha_bar_i .* N_i
     Q_d_i = copy(Y_i)
+    Q_s_i = copy(Y_i) #Added
     P_i = ones(typeFloat, I)
     S_i = zeros(typeFloat, I)
     K_i = Y_i ./ (omega .* kappa_i)
@@ -118,7 +119,6 @@ function init_firms(parameters, initial_conditions; typeInt = Int64, typeFloat =
     DL_d_i = zeros(typeFloat, I)
     K_e_i = zeros(typeFloat, I)
     L_e_i = zeros(typeFloat, I)
-    Q_s_i = zeros(typeFloat, I)
     I_d_i = zeros(typeFloat, I)
     DM_d_i = zeros(typeFloat, I)
     N_d_i = zeros(typeInt, I)

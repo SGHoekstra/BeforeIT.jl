@@ -38,8 +38,29 @@ function firms_expectations_and_decisions(firms, model)
     gamma_e = model.agg.gamma_e
     pi_e = model.agg.pi_e
 
-    # target quantity
-    Q_s_i = firms.Q_d_i * (1 + gamma_e)
+    # Individual firm quantity and price adjustments
+    I = length(firms.G_i);
+    gamma_d_i = zeros(I);
+    pi_d_i = zeros(I);
+
+    for i=1:I
+        if firms.Q_s_i[i] <= firms.Q_d_i[i] && firms.P_i[i] >= P_bar_g[firms.G_i[i]]
+            gamma_d_i[i] = firms.Q_d_i[i] / firms.Q_s_i[i]-1;
+            pi_d_i[i]=0;
+        elseif firms.Q_s_i[i] <= firms.Q_d_i[i] && firms.P_i[i] < P_bar_g[firms.G_i[i]]
+            gamma_d_i[i] = 0;
+            pi_d_i[i] = firms.Q_d_i[i] / firms.Q_s_i[i] - 1;
+        elseif firms.Q_s_i[i] > firms.Q_d_i[i] && firms.P_i[i] >= P_bar_g[firms.G_i[i]]
+            gamma_d_i[i] = 0;
+            pi_d_i[i] = firms.Q_d_i[i] / firms.Q_s_i[i] - 1;
+        elseif firms.Q_s_i[i] > firms.Q_d_i[i] && firms.P_i[i] < P_bar_g[firms.G_i[i]]
+            gamma_d_i[i] = firms.Q_d_i[i] / firms.Q_s_i[i] - 1;
+            pi_d_i[i] = 0;
+        end
+    end
+    
+    #Q_s_i = firms.Q_s_i .* (1 + gamma_e) IIASA
+    Q_s_i = firms.Q_s_i .* (1 .+ gamma_e) .* (1 .+ gamma_d_i)
 
     # price setting
     # dividing equation for pi_c_i into smaller pieces
@@ -49,7 +70,8 @@ function firms_expectations_and_decisions(firms, model)
 
     pi_c_i = term1 + 1 ./ firms.beta_i .* (term2 ./ firms.P_i .- 1) + term3
 
-    new_P_i = firms.P_i .* (1 .+ pi_c_i) .* (1 + pi_e)
+    # new_P_i = firms.P_i .* (1 .+ pi_c_i) .* (1 + pi_e) IASSA 
+    new_P_i = firms.P_i .* (1 .+ pi_c_i) .* (1 + pi_e) .* (1 .+ pi_d_i)
 
     # target investments in capital
     I_d_i = firms.delta_i ./ firms.kappa_i .* min(Q_s_i, firms.K_i .* firms.kappa_i)
@@ -310,14 +332,14 @@ Calculate the equity of firms.
 The equity `E_i` is calculated as follows:
 
 ```math
-E_i = D_i + M_i * \\sum(a_{sg}[:, G_i] * \\bar{P}_g) + P_i * S_i + \\bar{P}_{CF} * K_i - L_i
+E_i = D_i + M_i * \\sum(a_{sg}[:, firms.G_i] * \\bar{P}_g) + P_i * S_i + \\bar{P}_{CF} * K_i - L_i
 ```
 
 where:
 - `D_i`: Deposits
 - `M_i`: Intermediate goods
 - `a_sg`: Technology coefficient of the gth product in the sth industry
-- `G_i`: Vector of goods
+- `firms.G_i`: Vector of goods
 - `P_bar_g`: Producer price index for principal good g
 - `P_i`: Price
 - `S_i`: Stock

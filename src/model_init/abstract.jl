@@ -47,7 +47,7 @@ macro firm(T = Vector{Float64}, I = Vector{Int})
         N_i::$I
         Y_i::$T
         Q_i::$T
-        Q_d_i::$T
+        Q_d_i::$T 
         P_i::$T
         S_i::$T
         K_i::$T

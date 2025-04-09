@@ -9,11 +9,14 @@ using FileIO, Plots
 # We then initialise the model loading some precomputed set of parameters and by specifying a number of epochs.
 # In another tutorial we will illustrate how to compute parameters and initial conditions.
 
-year_i = 2010
+year_i = 2019
 quarter = 4
 
-parameters = load(pwd() * "/src/utils/parameters_initial_conditions_data/netherlands/parameters/"* string(year_i) *"Q"* string(quarter) *".jld2");
-initial_conditions = load(pwd() * "/src/utils/parameters_initial_conditions_data/netherlands/initial_conditions/"* string(year_i) *"Q"* string(quarter) *".jld2");
+country = "netherlands"
+country = "italy"
+
+parameters = load(pwd() * "/src/utils/parameters_initial_conditions_data/$(country)/parameters/"* string(year_i) *"Q"* string(quarter) *".jld2");
+initial_conditions = load(pwd() * "/src/utils/parameters_initial_conditions_data/$(country)/initial_conditions/"* string(year_i) *"Q"* string(quarter) *".jld2");
 
 # To run mu
 # We can now initialise the model, by specifying in advance the maximum number of epochs.
@@ -55,7 +58,7 @@ plot(ps..., layout = (3, 3))
 # To run multiple monte-carlo repetitions in parallel we can use
 
 model = Bit.init_model(parameters, initial_conditions, T)
-data_vector = Bit.ensemblerun(model, 4)
+data_vector = Bit.ensemblerun(model, 20)
 
 # Note that this will use the number of threads specified when activating the Julia environment.
 # To discover the number of threads available, you can use the command 
