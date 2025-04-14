@@ -37,8 +37,14 @@ macro data(AV = Vector{Float64}, AM = Matrix{Float64})
         gdp_deflator_growth_ea::$AV
         real_gdp_ea::$AV
         euribor::$AV
+        aggregate_inflation_expectations::$AV
         nominal_sector_gva::$AM
         real_sector_gva::$AM
+        demand_pull_inflation::$AM
+        cost_push_inflation::$AM
+        cost_push_inflation_labour::$AM
+        cost_push_inflation_material::$AM
+        cost_push_inflation_capital::$AM
     end)
 end
 
@@ -73,7 +79,7 @@ Initialise the data arrays
 function init_data(m)
     p = m.prop
     T = p.T
-    d = Data([zeros(T + 1) for _ in 1:25]..., zeros(T + 1, p.G), zeros(T + 1, p.G))
+    d = Data([zeros(T + 1) for _ in 1:26]..., zeros(T + 1, p.G), zeros(T + 1, p.G), [zeros(T + 1, p.I) for _ in 1:5]...)
     _update_data_init!(d, m)
     return d
 end
@@ -125,7 +131,6 @@ function _update_data_init!(d, m)
     d.euribor[1] = m.cb.r_bar
     d.gdp_deflator_growth_ea[1] = m.rotw.pi_EA
     d.real_gdp_ea[1] = m.rotw.Y_EA
-
     return d
 end
 
@@ -232,5 +237,12 @@ function update_data!(d, m)
     d.euribor[t] = m.cb.r_bar
     d.gdp_deflator_growth_ea[t] = m.rotw.pi_EA
     d.real_gdp_ea[t] = m.rotw.Y_EA
+
+    d.demand_pull_inflation[t,:] = m.firms.pi_d_i
+    d.cost_push_inflation[t,:] = m.firms.pi_c_i
+    d.cost_push_inflation_labour[t,:] = m.firms.pi_l_i
+    d.cost_push_inflation_material[t,:] = m.firms.pi_m_i
+    d.cost_push_inflation_capital[t,:] = m.firms.pi_k_i
+    d.aggregate_inflation_expectations[t] = m.agg.pi_e
 end
 

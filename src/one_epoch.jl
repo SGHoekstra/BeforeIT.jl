@@ -61,7 +61,7 @@ function CommonSolve.step!(model::AbstractModel; multi_threading = false, shock 
     ####### FIRM EXPECTATIONS AND DECISIONS #######
 
     # compute firm quantity, price, investment and intermediate-goods, employment decisions, expected profits, and desired/expected loans and capital
-    Q_s_i, I_d_i, DM_d_i, N_d_i, Pi_e_i, DL_d_i, K_e_i, L_e_i, P_i =
+    Q_s_i, I_d_i, DM_d_i, N_d_i, Pi_e_i, DL_d_i, K_e_i, L_e_i, P_i, pi_d_i, pi_c_i, pi_l_i, pi_k_i, pi_m_i =
         Bit.firms_expectations_and_decisions(firms, model)
 
     firms.Q_s_i .= Q_s_i
@@ -73,6 +73,11 @@ function CommonSolve.step!(model::AbstractModel; multi_threading = false, shock 
     firms.DL_d_i .= DL_d_i
     firms.K_e_i .= K_e_i
     firms.L_e_i .= L_e_i
+    firms.pi_d_i .= pi_d_i
+    firms.pi_c_i .= pi_c_i
+    firms.pi_l_i .= pi_l_i
+    firms.pi_k_i .= pi_k_i
+    firms.pi_m_i .= pi_m_i
 
     ####### CREDIT MARKET, LABOUR MARKET AND PRODUCTION #######
 

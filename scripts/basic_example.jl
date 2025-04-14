@@ -13,7 +13,7 @@ year_i = 2019
 quarter = 4
 
 country = "netherlands"
-country = "italy"
+#country = "italy"
 
 parameters = load(pwd() * "/src/utils/parameters_initial_conditions_data/$(country)/parameters/"* string(year_i) *"Q"* string(quarter) *".jld2");
 initial_conditions = load(pwd() * "/src/utils/parameters_initial_conditions_data/$(country)/initial_conditions/"* string(year_i) *"Q"* string(quarter) *".jld2");

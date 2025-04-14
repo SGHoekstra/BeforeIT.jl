@@ -72,6 +72,11 @@ macro firm(T = Vector{Float64}, I = Vector{Int})
         DM_d_i::$T
         N_d_i::$I
         Pi_e_i::$T
+        pi_d_i::$T
+        pi_c_i::$T
+        pi_l_i::$T
+        pi_m_i::$T
+        pi_k_i::$T
         ### Household fields (firms' owners)
         Y_h::$T
         C_d_h::$T

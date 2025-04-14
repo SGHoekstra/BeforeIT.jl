@@ -25,7 +25,7 @@ println(cal.estimation_date)
 # We can calibrate the model on a specific quarter as follows
 
 calibration_date = DateTime(2010, 03, 31)
-parameters, initial_conditions = Bit.get_params_and_initial_conditions_netherlands(cal, calibration_date; scale = 0.01)
+parameters, initial_conditions = Bit.get_params_and_initial_conditions_netherlands(cal, calibration_date; scale = 0.001)
 
 # In general, we might want to repeat this operation for multiple quarters.
 # In the following, we loop over all quarters from 2010Q1 to 2019Q4

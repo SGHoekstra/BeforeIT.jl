@@ -64,11 +64,13 @@ function firms_expectations_and_decisions(firms, model)
 
     # price setting
     # dividing equation for pi_c_i into smaller pieces
-    term1 = (1 + tau_SIF) .* firms.w_bar_i ./ firms.alpha_bar_i .* (P_bar_HH ./ firms.P_i .- 1)
-    term2 = dropdims(sum(a_sg[:, firms.G_i] .* P_bar_g, dims = 1), dims = 1)
-    term3 = firms.delta_i ./ firms.kappa_i .* (P_bar_CF ./ firms.P_i .- 1)
+    pi_l_i = (1 + tau_SIF) .* firms.w_bar_i ./ firms.alpha_bar_i .* (P_bar_HH ./ firms.P_i .- 1)
+    term = dropdims(sum(a_sg[:, firms.G_i] .* P_bar_g, dims = 1), dims = 1)
+    pi_k_i = firms.delta_i ./ firms.kappa_i .* (P_bar_CF ./ firms.P_i .- 1)
 
-    pi_c_i = term1 + 1 ./ firms.beta_i .* (term2 ./ firms.P_i .- 1) + term3
+    pi_m_i =  1 ./ firms.beta_i .* (term ./ firms.P_i .- 1)
+
+    pi_c_i = pi_l_i .+ pi_k_i .+ pi_m_i
 
     # new_P_i = firms.P_i .* (1 .+ pi_c_i) .* (1 + pi_e) IASSA 
     new_P_i = firms.P_i .* (1 .+ pi_c_i) .* (1 + pi_e) .* (1 .+ pi_d_i)
@@ -96,7 +98,7 @@ function firms_expectations_and_decisions(firms, model)
     # expected loans
     L_e_i = (1 - theta) .* firms.L_i
 
-    return Q_s_i, I_d_i, DM_d_i, N_d_i, Pi_e_i, DL_d_i, K_e_i, L_e_i, new_P_i
+    return Q_s_i, I_d_i, DM_d_i, N_d_i, Pi_e_i, DL_d_i, K_e_i, L_e_i, new_P_i, pi_d_i, pi_c_i, pi_l_i, pi_k_i, pi_m_i
 
 end
 

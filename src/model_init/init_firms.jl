@@ -123,11 +123,15 @@ function init_firms(parameters, initial_conditions; typeInt = Int64, typeFloat =
     DM_d_i = zeros(typeFloat, I)
     N_d_i = zeros(typeInt, I)
     Pi_e_i = zeros(typeFloat, I)
-
+    pi_d_i = zeros(typeFloat, I)
+    pi_c_i = zeros(typeFloat, I)
+    pi_l_i = zeros(typeFloat, I)
+    pi_m_i = zeros(typeFloat, I)
+    pi_k_i = zeros(typeFloat, I)
 
     firms_args = (G_i, alpha_bar_i, beta_i, kappa_i, w_i, w_bar_i, delta_i, tau_Y_i, tau_K_i, N_i, Y_i, Q_i, Q_d_i, 
                       P_i, S_i, K_i, M_i, L_i, pi_bar_i, D_i, Pi_i, V_i, I_i, E_i, P_bar_i, P_CF_i, DS_i, DM_i, DL_i, 
-                      DL_d_i, K_e_i, L_e_i, Q_s_i, I_d_i, DM_d_i, N_d_i, Pi_e_i, Y_h, C_d_h, I_d_h, C_h, I_h, K_h, D_h)
+                      DL_d_i, K_e_i, L_e_i, Q_s_i, I_d_i, DM_d_i, N_d_i, Pi_e_i, pi_d_i, pi_c_i, pi_l_i, pi_m_i, pi_k_i, Y_h, C_d_h, I_d_h, C_h, I_h, K_h, D_h)
 
     firms = Firms(firms_args...)
     return firms, firms_args

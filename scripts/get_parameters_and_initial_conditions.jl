@@ -38,7 +38,7 @@ start_calibration_date = DateTime(2010, 03, 31)
 end_calibration_date = DateTime(2019, 12, 31)
 
 for calibration_date in collect(start_calibration_date:Dates.Month(3):end_calibration_date)
-    params, init_conds = Bit.get_params_and_initial_conditions(cal, calibration_date; scale = 0.001)
+    params, init_conds = Bit.get_params_and_initial_conditions(cal, calibration_date; scale = 0.01)
     save(
         "src/" *
         "utils/" *
