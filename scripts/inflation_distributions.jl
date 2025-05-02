@@ -13,7 +13,7 @@ initial_conditions = load(pwd() * "/src/utils/parameters_initial_conditions_data
 
 T = 16
 model = Bit.init_model(parameters, initial_conditions, T)
-data_vector = Bit.ensemblerun(model, 1)
+data = Bit.ensemblerun(model, 1)
 
 
 # Create a 3×3 grid of subplots
@@ -48,9 +48,9 @@ colors = [:dodgerblue, :crimson, :forestgreen, :darkorchid, :darkorange,
 
 for (i, mask) in enumerate(masks)
     # Get data for this group
-    group_data = (1 .+ data_vector.demand_pull_inflation[T+1,mask]) .*
-                 (1 .+ data_vector.cost_push_inflation[T+1,mask]) .*
-                 (1 .+ data_vector.aggregate_inflation_expectations[T+1]) .- 1
+    group_data = (1 .+ data.demand_pull_inflation[T+1,mask]) .*
+                 (1 .+ data.cost_push_inflation[T+1,mask]) .*
+                 (1 .+ data.aggregate_inflation_expectations[T+1]) .- 1
     
     # Remove outliers based on standard deviation
     group_data = group_data[abs.(group_data .- mean(group_data)) .< 1 * std(group_data)]
@@ -80,5 +80,4 @@ plot!(inflation_histograms,
 
 inflation_histograms
 
-data_vector = Bit.ensemblerun(model, 32; multi_threading = true)
 

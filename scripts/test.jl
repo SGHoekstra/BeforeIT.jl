@@ -1,5 +1,4 @@
 
-function get_predictions_from_sims(data, quarter_num, horizon, number_seeds)
 
     # define a dictionary to store the data
     model_dict = Dict{String, Any}()
@@ -62,7 +61,7 @@ function get_predictions_from_sims(data, quarter_num, horizon, number_seeds)
     ]
 
     #nominal_gdp_growth_quarterly = hcat([diff(log.(s.nominal_gdp)) for s in sims]...)
-    nominal_gdp_growth_quarterly = diff(log.(sims.nominal_gdp), dims =1)
+    nominal_gdp_growth_quarterly = diff(log.(sims.nominal_gdp),dims =1)
     nominal_gdp_growth_quarterly = exp.(nominal_gdp_growth_quarterly) .- 1
     nominal_gdp_quarterly =
         data["nominal_gdp_quarterly"][data["quarters_num"] .== quarter_num] .*
@@ -1319,4 +1318,3 @@ function get_predictions_from_sims(data, quarter_num, horizon, number_seeds)
         model_dict,
     )
 
-end

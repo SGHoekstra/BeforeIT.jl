@@ -40,9 +40,7 @@ end_calibration_date = DateTime(2019, 12, 31)
 for calibration_date in collect(start_calibration_date:Dates.Month(3):end_calibration_date)
     params, init_conds = Bit.get_params_and_initial_conditions(cal, calibration_date; scale = 0.01)
     save(
-        "src/" *
-        "utils/" *
-        "parameters_initial_conditions_data/"*
+        "data/"*
         "italy/parameters/" *
         string(year(calibration_date)) *
         "Q" *
@@ -51,9 +49,7 @@ for calibration_date in collect(start_calibration_date:Dates.Month(3):end_calibr
         params,
     )
     save(
-        "src/" *
-        "utils/" *
-        "parameters_initial_conditions_data/"*
+        "data/"*
         "italy/initial_conditions/" *
         string(year(calibration_date)) *
         "Q" *

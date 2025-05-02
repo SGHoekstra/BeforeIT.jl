@@ -38,6 +38,9 @@ function init_properties(parameters::Dict{String, Any}, T::Integer; typeInt::Dat
     properties[:zeta_LTV] = typeFloat(parameters["zeta_LTV"])   # Loan-to-value (LTV) ratio
     properties[:zeta_b] = typeFloat(parameters["zeta_b"])     # Loan-to-capital ratio for new firms after bankruptcy
 
+    # Union related parameters
+    properties[:theta_UNION] = 1.0
+
     # products related parameters
     b_CF_g = parameters["b_CF_g"]  
     b_CFH_g = parameters["b_CFH_g"]
@@ -57,7 +60,7 @@ function init_properties(parameters::Dict{String, Any}, T::Integer; typeInt::Dat
     properties[:products][:a_sg] = a_sg            # Technology coefficient of the gth product in the sth industry
 
     properties[:C] = parameters["C"]
-
+    
     # convert to NamedTuple
     properties = recursive_namedtuple(properties)
 

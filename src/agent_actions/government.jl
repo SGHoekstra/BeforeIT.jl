@@ -59,8 +59,10 @@ function gov_revenues(model::Model)
     tot_I_h = sum(w_act.I_h) + sum(w_inact.I_h) + sum(firms.I_h) + bank.I_h
 
     # compute government revenues
-    social_security = (tau_SIF + tau_SIW) * tot_wages_emp * P_bar_HH
-    labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
+    #social_security = (tau_SIF + tau_SIW) * tot_wages_emp * P_bar_HH 
+    social_security = (tau_SIF + tau_SIW) * tot_wages_emp * (1 + prop.theta_UNION * max(P_bar_HH - 1,0)) 
+    #labour_income = tau_INC * (1 - tau_SIW) * P_bar_HH * tot_wages_emp
+    labour_income = tau_INC * (1 - tau_SIW) * tot_wages_emp * (1 + prop.theta_UNION * max(P_bar_HH - 1,0)) 
     value_added = tau_VAT * tot_C_h
     capital_income = tau_INC * (1 - tau_FIRM) * theta_DIV * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))
     corporate_income = tau_FIRM * (sum(pos.(firms.Pi_i)) + pos(bank.Pi_k))

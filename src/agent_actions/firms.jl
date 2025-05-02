@@ -228,7 +228,7 @@ function firms_profits(firms::AbstractFirms, model::Model)
 
     in_sales = firms.P_i .* firms.Q_i .+ firms.P_i .* firms.DS_i
     in_deposits = r_bar .* pos(firms.D_i)
-    out_wages = (1.0 + tau_SIF) .* firms.w_i .* firms.N_i .* P_bar_HH
+    out_wages = (1.0 + tau_SIF) .* firms.w_i .* firms.N_i .* (1 + model.prop.theta_UNION * max(P_bar_HH - 1,0)) 
     out_expenses = 1.0 ./ firms.beta_i .* firms.P_bar_i .* firms.Y_i
     out_depreciation = firms.delta_i ./ firms.kappa_i .* firms.P_CF_i .* firms.Y_i
     out_taxes_prods = firms.tau_Y_i .* firms.P_i .* firms.Y_i
@@ -288,7 +288,7 @@ function firms_deposits(firms, model)
 
 
     sales = firms.P_i .* firms.Q_i
-    labour_cost = -(1 + tau_SIF) * firms.w_i .* firms.N_i * P_bar_HH
+    labour_cost = -(1 + tau_SIF) * firms.w_i .* firms.N_i * (1 + model.prop.theta_UNION * max(P_bar_HH - 1,0)) 
     material_cost = -firms.DM_i .* firms.P_bar_i
     taxes_products = -firms.tau_Y_i .* firms.P_i .* firms.Y_i
     taxes_production = -firms.tau_K_i .* firms.P_i .* firms.Y_i
