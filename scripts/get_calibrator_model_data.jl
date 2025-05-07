@@ -39,10 +39,10 @@ Runs the economic model for multiple simulations and returns a structured matrix
 
 function run_abm_simulations_with_parameters(
     models,
-    calibration_params::Dict,
+    par_dict::Dict,
     start_date::DateTime,
     end_date::DateTime;
-    num_simulations::Int = 100,
+    num_simulations::Int = 10,
     multi_threading::Bool = false,
 )
 
@@ -102,8 +102,10 @@ function run_abm_simulations_with_parameters(
         # Set T to the difference, with a maximum of 12
         T = min(quarters_diff, 12)
 
+        model.prop.theta_UNION = par_dict["theta_UNION"]
+        
         # Run simulations
-        sims = BIT.run_n_sims(model, num_simulations; multi_threading = multi_threading)
+        sims = BIT.ensemblerun(model, num_simulations; multi_threading = multi_threading)
 
         
         predictions = BIT.get_predictions_from_sims_directly(data, sims, quarter_num, T, S)
@@ -129,10 +131,7 @@ end
 
 function get_models(
     start_date::DateTime,
-    end_date::DateTime;
-    model_type::String = "base",
-    empirical_distribution::Bool = false,
-    conditional_forecasts::Bool = true,
+    end_date::DateTime
 )
 
     data = BIT.NETHERLANDS_CALIBRATION.data
@@ -174,24 +173,16 @@ function get_models(
         
 
         # Initialize model with parameters for this quarter
-        initial_conditions = load("./src/utils/parameters_initial_conditions_data/netherlands_households_own_firms/initial_conditions/" * 
+        initial_conditions = load("./src/utils/parameters_initial_conditions_data/netherlands/initial_conditions/" * 
                                  string(year(quarter_date)) * "Q" * string(Dates.quarterofyear(quarter_date)) * ".jld2")
         
         # Merge user parameters with defaults
-        parameters = load("./src/utils/parameters_initial_conditions_data/netherlands_households_own_firms/parameters/" * 
+        parameters = load("./src/utils/parameters_initial_conditions_data/netherlands/parameters/" * 
                                            string(year(quarter_date)) * "Q" * string(Dates.quarterofyear(quarter_date)) * ".jld2")
         
         # Initialize model
-        if model_type == "optimal_consumption"
-            model = BIT.initialise_model(parameters, initial_conditions, T;
-                                        optimal_consumption = true,
-                                        empirical_distribution = empirical_distribution,
-                                        conditional_forecasts = conditional_forecasts)
-        else
-            model = BIT.initialise_model(parameters, initial_conditions, T;
-                                        empirical_distribution = empirical_distribution,
-                                        conditional_forecasts = conditional_forecasts)
-        end
+        model = Bit.init_model(parameters, initial_conditions, T)
+       
         
         push!(models,model)
     end
@@ -199,50 +190,3 @@ function get_models(
     return models
 end
 
-
-start_date = DateTime(2010, 03, 31)
-end_date = DateTime(2013, 12, 31)
-
-
-models = get_models(
-    start_date,
-    end_date;
-    model_type = "base",
-    empirical_distribution = false,
-    conditional_forecasts = false,
-)
-
-
-calibration_parameters = Dict(
-    "mpc_y" => 0.5,
-    "mpc_k" => 0.03
-)
-
-@time f1 = run_abm_simulations_with_parameters(
-    models,
-    calibration_parameters,
-    start_date,
-    end_date;
-    num_simulations = 2,
-    model_type = "base",
-    abmx = false,
-    empirical_distribution = false,
-    conditional_forecasts = false,
-);
-
-calibration_parameters = Dict(
-    "mpc_y" => 0.8,
-    "mpc_k" => 0.03
-)
-
-@time f2 = run_abm_simulations_with_parameters(
-    models,
-    calibration_parameters,
-    start_date,
-    end_date;
-    num_simulations = 10,
-    model_type = "base",
-    abmx = false,
-    empirical_distribution = false,
-    conditional_forecasts = false,
-);

@@ -1,7 +1,6 @@
 # Load the necessary packages
 import BeforeIT as BIT
 using Dates
-using DelimitedFiles
 using CSV
 using HDF5
 using JLD2
@@ -108,4 +107,4 @@ start_date = DateTime(2010, 03, 31)
 end_date = DateTime(2013, 12, 31)
 
 # Example usage:
-data_matrix = load_timeseries_for_calibrator(start_date, end_date; repetitions = 2)
+data_matrix = Bit.load_timeseries_for_calibrator(start_date, end_date; repetitions = 2)

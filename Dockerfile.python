@@ -1,0 +1,20 @@
+# Use an official Python base image compatible with ARM64
+FROM python:3.12.9
+
+WORKDIR /app
+
+# Install required packages
+RUN pip install numpy requests
+
+# Copy client code
+COPY beforeit_http_client.py /app/
+COPY calibration_client.py /app/
+
+# Set environment variables with defaults
+ENV CONFIG_FILE="/app/beforeit_config.json"
+
+# Create directory for results
+RUN mkdir -p /app/results
+
+# Run the calibration
+CMD ["python", "calibration_client.py"]

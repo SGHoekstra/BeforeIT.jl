@@ -14,7 +14,7 @@ start_date = nothing
 end_date = nothing
 
 # Ensure directories exist
-mkpath(INPUT_DIR)
+mkpath(INPUT_DIR) 
 mkpath(OUTPUT_DIR)
 
 function process_file(input_file)
@@ -36,18 +36,12 @@ function process_file(input_file)
                 # Parse dates
                 global start_date = DateTime(input_data["start_date"])
                 global end_date = DateTime(input_data["end_date"])
-                model_type = get(input_data, "model_type", "base")
-                empirical_distribution = get(input_data, "empirical_distribution", false)
-                conditional_forecasts = get(input_data, "conditional_forecasts", false)
-                
+
                 # Initialize models
                 @info "Initializing models from $start_date to $end_date"
                 global global_models = BeforeIT.get_models(
                     start_date, 
-                    end_date;
-                    model_type=model_type,
-                    empirical_distribution=empirical_distribution,
-                    conditional_forecasts=conditional_forecasts
+                    end_date
                 )
                 
                 result["status"] = "success"
@@ -68,35 +62,13 @@ function process_file(input_file)
                 else
                     # Get parameters and create dictionary
                     params = input_data["params"]
-                    version_c = get(input_data, "version_c", 1)
+                    param_dict = Dict("theta_UNION" => params[1])
 
-                    param_dict = Dict()
-                    if version_c == 1
-                        param_dict = Dict("γ" => params[1])
-                    elseif version_c == 2
-                        param_dict = Dict("α" => params[1], "β" => params[2])
-                    elseif version_c == 3
-                        param_dict = Dict("γ" => params[1], "δ" => params[2])
-                    elseif version_c == 4
-                        param_dict = Dict("α" => params[1], "β" => params[2], "δ" => params[3])
-                    elseif version_c == 5
-                        param_dict = Dict("α" => params[1], "β" => params[2], "θ" => params[3], "ρ" => params[4])
-                    elseif version_c == 6
-                        param_dict = Dict("γ" => params[1], "α" => params[2], "β" => params[3])
-                    elseif version_c == 7
-                        param_dict = Dict("γ" => params[1], "α" => params[2], "β" => params[3], "δ" => params[4])
-                    elseif version_c == 8
-                        param_dict = Dict("γ" => params[1], "α" => params[2], "β" => params[3], "δ" => params[4], "θ" => params[5], "ρ" => params[6])
-                    end
-                    
                     # Get simulation parameters
                     sim_start_date = DateTime(input_data["start_date"])
                     sim_end_date = DateTime(input_data["end_date"])
                     
-                    model_type = get(input_data, "model_type", "extended_heuristic")
                     num_simulations = get(input_data, "num_simulations", 1)
-                    abmx = get(input_data, "abmx", false)
-                    conditional_forecasts = get(input_data, "conditional_forecasts", false)
                     multi_threading = get(input_data, "multi_threading", true)
                     
                     @info "Running simulation with $(length(params)) parameters"
@@ -107,10 +79,6 @@ function process_file(input_file)
                         sim_start_date,
                         sim_end_date;
                         num_simulations=num_simulations,
-                        model_type=model_type,
-                        abmx=abmx,
-                        conditional_forecasts=conditional_forecasts,
-                        version_c=version_c,
                         multi_threading=multi_threading
                     )
                     

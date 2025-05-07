@@ -61,6 +61,11 @@ include("utils/_calibration_steady_state.jl")
 include("utils/get_accounting_identities.jl")
 include("utils/dutch_calibration_data.jl")
 
+# Black-it 
+include("../scripts/get_calibrator_data.jl")
+include("../scripts/get_calibrator_model_data.jl")
+include("utils/get_predictions_from_sims_directly.jl")
+
 # standard parameters
 include("utils/standard_params_initial_conditions.jl")
 include("utils/standard_calibration_data.jl")

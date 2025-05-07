@@ -1,0 +1,13 @@
+{
+  "server_urls": [
+    "http://localhost:8080"
+,
+    "http://localhost:8081"
+,
+    "http://localhost:8082"
+,
+    "http://localhost:8083"
+  ],
+  "version": 2,
+  "num_calibration": 10
+}

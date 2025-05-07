@@ -9,11 +9,11 @@ year_ = 2010
 number_years = 9
 number_quarters = 4 * number_years
 horizon = 12
-number_seeds = 4
+number_seeds = 10
 number_sectors = 62
 
 # Load the real time series
-data = Bit.ITALY_CALIBRATION.data
+data = Bit.NETHERLANDS_CALIBRATION.data
 
 quarters_num = []
 year_m = year_

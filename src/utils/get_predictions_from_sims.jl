@@ -1,5 +1,5 @@
 
-function get_predictions_from_sims(data, quarter_num, horizon, number_seeds)
+function get_predictions_from_sims(data, quarter_num, horizon, number_seeds; country = "netherlands")
 
     # define a dictionary to store the data
     model_dict = Dict{String, Any}()
@@ -7,7 +7,7 @@ function get_predictions_from_sims(data, quarter_num, horizon, number_seeds)
     year_num = Bit.date2num(DateTime(year(Bit.num2date(quarter_num)) + 1, 1, 1) - Day(1))
     date = Bit.num2date(quarter_num)
 
-    file_name = "data/italy/simulations/" * string(year(date)) * "Q" * string(quarterofyear(date)) * ".jld2"
+    file_name = "data/" * country * "/simulations/" * string(year(date)) * "Q" * string(quarterofyear(date)) * ".jld2"
     sims = load(file_name)["data_vector"]
 
     forecasting_date = DateTime(year(date), month(date), 1) + Month(3 * horizon + 1)
@@ -1314,7 +1314,7 @@ function get_predictions_from_sims(data, quarter_num, horizon, number_seeds)
 
     # save the model_dict to an appropriate folder
     save(
-        "data/italy/abm_predictions/" * string(year(date)) * "Q" * string(quarterofyear(date)) * ".jld2",
+        "data/" * country * "/abm_predictions/" * string(year(date)) * "Q" * string(quarterofyear(date)) * ".jld2",
         "model_dict",
         model_dict,
     )

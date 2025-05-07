@@ -1,0 +1,29 @@
+FROM julia:1.10
+
+WORKDIR /app
+
+# Copy the entire project first to maintain structure
+COPY . /app/
+
+# Install required HTTP packages explicitly
+RUN julia -e 'using Pkg; Pkg.add(["HTTP", "JSON", "Dates"])'
+
+# Activate and instantiate the project environment
+RUN julia -e 'using Pkg; Pkg.activate("."); Pkg.instantiate(); Pkg.precompile()'
+
+# Create directory for logs
+RUN mkdir -p /app/logs
+
+# Set environment variables with defaults
+ENV BEFOREIT_PORT=8080
+ENV BEFOREIT_HOST="0.0.0.0"
+
+# Expose the default port
+EXPOSE 8080
+
+# Add a healthcheck
+HEALTHCHECK --interval=5s --timeout=3s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+# Start the HTTP server
+CMD ["julia", "--project=.", "calibration/beforeit_http_server.jl"]

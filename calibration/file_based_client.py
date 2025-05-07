@@ -8,7 +8,7 @@ import numpy as np
 class BeforeITFileClient:
     """Client for communicating with BeforeIT Julia server through files"""
     
-    def __init__(self, input_dir="./shared/input", output_dir="./shared/output", timeout=300):
+    def __init__(self, input_dir="./shared_data/input", output_dir="./shared_data/output", timeout=300):
         """Initialize with input/output directories and timeout"""
         self.input_dir = input_dir
         self.output_dir = output_dir
@@ -19,7 +19,7 @@ class BeforeITFileClient:
         os.makedirs(self.output_dir, exist_ok=True)
         
         # Store server ID for logs
-        self.server_id = os.path.basename(os.path.dirname(self.input_dir)) if '/' in self.input_dir else "unknown"
+        self.server_id = os.path.basename(os.path.dirname(os.path.dirname(self.input_dir))) if '/' in self.input_dir else "unknown"
     
     def _send_command(self, command_data):
         """Send a command to the Julia server via file system"""
@@ -63,10 +63,7 @@ class BeforeITFileClient:
         command_data = {
             "command": "initialize",
             "start_date": start_date,
-            "end_date": end_date,
-            "model_type": model_type,
-            "empirical_distribution": empirical_distribution,
-            "conditional_forecasts": conditional_forecasts
+            "end_date": end_date
         }
         
         print(f"Initializing models on server {self.server_id}")
@@ -90,8 +87,7 @@ class BeforeITFileClient:
         return result["data"]
     
     def run_simulation(self, params, start_date="2010-03-31", end_date="2013-12-31", 
-                     model_type="extended_heuristic", num_simulations=10, abmx=False, 
-                     conditional_forecasts=False, version_c=1, multi_threading=True):
+                num_simulations=10, multi_threading=True):
         """Run a simulation with given parameters"""
         # Convert numpy arrays to lists for JSON serialization
         if isinstance(params, np.ndarray):
@@ -102,11 +98,7 @@ class BeforeITFileClient:
             "params": params,
             "start_date": start_date,
             "end_date": end_date,
-            "model_type": model_type,
             "num_simulations": num_simulations,
-            "abmx": abmx,
-            "conditional_forecasts": conditional_forecasts,
-            "version_c": version_c,
             "multi_threading": multi_threading
         }
         
@@ -122,7 +114,7 @@ class BeforeITFileClient:
 class ServerMonitor:
     """Simple monitor for distributing work across multiple BeforeIT servers"""
     
-    def __init__(self, num_servers, base_dir="./shared_data_"):
+    def __init__(self, num_servers, base_dir="./shared_data/shared_data_"):
         """Initialize with the number of servers and base directory"""
         self.num_servers = num_servers
         self.base_dir = base_dir
@@ -200,7 +192,7 @@ class ServerMonitor:
             except Exception as e:
                 print(f"Error initializing server {server_num}: {e}")
     
-    def run_simulation(self, params, start_date, end_date, version_c=2, **kwargs):
+    def run_simulation(self, params, start_date, end_date, **kwargs):
         """Run a simulation on the next available server"""
         # Get the next available server
         server_idx = self.get_next_server()
@@ -210,6 +202,10 @@ class ServerMonitor:
         if isinstance(params, np.ndarray):
             params = params.tolist()
         
+        # Ensure params is a list
+        if not isinstance(params, list):
+            params = [params]
+
         print(f"Running simulation on server {server_num} with parameters {params}")
         
         # Run simulation on this server
@@ -217,7 +213,6 @@ class ServerMonitor:
             params,
             start_date=start_date,
             end_date=end_date,
-            version_c=version_c,
             **kwargs
         ))
         
@@ -228,8 +223,8 @@ class ServerMonitor:
 if __name__ == "__main__":
     # Test with a single server
     client = BeforeITFileClient(
-        input_dir="./shared_data_1/input",
-        output_dir="./shared_data_1/output"
+        input_dir="./shared_data/shared_data_1/input",
+        output_dir="./shared_data/shared_data_1/output"
     )
     
     # Initialize models
@@ -240,7 +235,7 @@ if __name__ == "__main__":
     print(f"Real data shape: {real_data.shape}")
     
     # Run a simulation
-    result = client.run_simulation([0.9, 0.5], version_c=2)
+    result = client.run_simulation([0.9])
     print(f"Simulation result shape: {np.array(result).shape}")
     
     # Test with multiple servers
@@ -258,7 +253,6 @@ if __name__ == "__main__":
         result = monitor.run_simulation(
             params,
             start_date="2010-03-31",
-            end_date="2013-12-31",
-            version_c=2
+            end_date="2013-12-31"
         )
         print(f"Result shape: {result.shape}")

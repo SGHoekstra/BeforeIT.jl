@@ -20,7 +20,7 @@ from calibration.file_based_client import ServerMonitor
 # Configuration
 num_servers = 4  # Number of server instances
 batch_size = 5
-bounds = [0.0, 1.5]
+bounds = [[0.0], [1.1]]
 precisions = [0.01]
 start_date = "2010-03-31"
 end_date = "2013-12-31"
@@ -41,8 +41,7 @@ try:
     print("Initializing all servers...")
     monitor.initialize_all_servers(
         start_date=start_date,
-        end_date=end_date,
-        model_type="base"
+        end_date=end_date
     )
     print("All servers initialized successfully")
 except Exception as e:
@@ -82,9 +81,7 @@ def abm_wrapper(params, sim_length=None, seed=None):
             params=params_list,
             start_date=start_date,
             end_date=end_date,
-            version_c=version_c,
             num_simulations=10,
-            model_type="extended_heuristic"
         )
 
         return result.T
@@ -94,7 +91,7 @@ def abm_wrapper(params, sim_length=None, seed=None):
         return np.zeros_like(real_data)
     
 # Test the function with some dummy parameters
-test_params = np.array([0.1, 0.5])
+test_params = np.array([0.9])
 result = abm_wrapper(test_params)
 print("\nTest with valid parameters:")
 print("Result shape:", result.shape)
@@ -236,8 +233,6 @@ print("Calibration process completed")
 
 import numpy as np
 from black_it.loss_functions.base import BaseLoss
-import numpy as np
-from black_it.utils.base import BaseLoss
 
 class EconomicTimeSeriesRMSE(BaseLoss):
     def __init__(

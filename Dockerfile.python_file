@@ -1,0 +1,32 @@
+# Use an official Python base image compatible with ARM64
+FROM python:3.12.9
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directory for the application
+WORKDIR /app
+
+# Copy the client code
+COPY ./calibration/file_based_client.py /app/
+COPY ./calibration/file_calibrate.py /app/
+
+
+# Create shared directories
+RUN mkdir -p /shared/input /shared/output
+RUN chmod -R 777 /shared
+
+# Set environment variables
+ENV BEFOREIT_INPUT_DIR=/shared/input
+ENV BEFOREIT_OUTPUT_DIR=/shared/output
+ENV BEFOREIT_POLL_INTERVAL=0.5
+ENV BEFOREIT_MAX_WAIT_TIME=600
+
+# Install Black-it and other dependencies
+RUN pip install black-it numpy
+
+# Command to run
+CMD ["python", "/app/file_calibrate.py"]

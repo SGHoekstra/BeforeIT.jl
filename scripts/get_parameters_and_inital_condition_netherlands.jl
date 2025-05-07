@@ -36,11 +36,9 @@ start_calibration_date = DateTime(2010, 03, 31)
 end_calibration_date = DateTime(2019, 12, 31)
 
 for calibration_date in collect(start_calibration_date:Dates.Month(3):end_calibration_date)
-    params, init_conds = Bit.get_params_and_initial_conditions_netherlands(cal, calibration_date; scale = 0.01)
+    params, init_conds = Bit.get_params_and_initial_conditions_netherlands(cal, calibration_date; scale = 0.001)
     save(
-        "src/" *
-        "utils/" *
-        "parameters_initial_conditions_data/"*
+        "data/"*
         "netherlands/" *
         "parameters/" *
         string(year(calibration_date)) *
@@ -50,9 +48,7 @@ for calibration_date in collect(start_calibration_date:Dates.Month(3):end_calibr
         params,
     )
     save(
-        "src/" *
-        "utils/" *
-        "parameters_initial_conditions_data/"*
+        "data/"*
         "netherlands/" *
         "initial_conditions/" *
         string(year(calibration_date)) *
