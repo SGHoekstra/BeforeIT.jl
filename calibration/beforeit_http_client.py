@@ -83,7 +83,7 @@ class BeforeITHttpClient:
         return result["data"]
     
     def run_simulation(self, params, start_date="2010-03-31", end_date="2013-12-31", 
-                       num_simulations=10, multi_threading=True):
+                       num_simulations=10, multi_threading=True, abmx=False):
         """Run a simulation with given parameters"""
         # Convert numpy arrays to lists for JSON serialization
         if isinstance(params, np.ndarray):
@@ -94,7 +94,8 @@ class BeforeITHttpClient:
             "start_date": start_date,
             "end_date": end_date,
             "num_simulations": num_simulations,
-            "multi_threading": multi_threading
+            "multi_threading": multi_threading,
+            "abmx": abmx,
         }
         
         print(f"Running simulation on server {self.server_id} with parameters: {params}")

@@ -32,8 +32,9 @@ function init_government(parameters, initial_conditions; typeInt = Int64, typeFl
     C_j = zero(typeFloat)
     P_j = zero(typeFloat)
     Y_G = zero(typeFloat)
+    L_G_lagged = zero(typeFloat)
 
-    gov_args = (alpha_G, beta_G, sigma_G, Y_G, C_G[T_prime], L_G, sb_inact, sb_other, C_d_j, C_j, P_j)
+    gov_args = (alpha_G, beta_G, sigma_G, Y_G, C_G[T_prime], L_G, L_G_lagged, sb_inact, sb_other, C_d_j, C_j, P_j)
 
     government = Government(gov_args...)
         

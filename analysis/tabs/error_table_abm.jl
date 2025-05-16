@@ -1,10 +1,14 @@
-import BeforeIT as BIT
-using Dates, DelimitedFiles, Statistics, Printf, LaTeXStrings, CSV, HDF5, FileIO, MAT
+import BeforeIT as Bit
 
-function error_table_abm(country::String = "italy")
+function error_table_abm(
+    country::String = "italy";
+    empirical_distribution::Bool = false,
+    abmx::Bool = false,
+    unconditional_forecasts::Bool = false,
+)
 
-    nanmean(x) = mean(filter(!isnan,x))
-    nanmean(x,y) = mapslices(nanmean,x; dims = y)
+    nanmean(x) = mean(filter(!isnan, x))
+    nanmean(x, y) = mapslices(nanmean, x; dims = y)
 
     # Helper functions for LaTeX table creation and stars notation
     function stars(p_value)
@@ -19,12 +23,9 @@ function error_table_abm(country::String = "italy")
         end
     end
 
-
     dir = @__DIR__
 
     # Load calibration data (with figaro input-output tables)
-
-
     year_ = 2010
     number_years = 10
     number_quarters = 4 * number_years
@@ -33,38 +34,62 @@ function error_table_abm(country::String = "italy")
     max_year = 2019
 
     for month in 4:3:((number_years + 1) * 12 + 1)
-
         global year_m = year_ + (month ÷ 12)
         mont_m = month % 12
         date = DateTime(year_m, mont_m, 1) - Day(1)
-
-        push!(quarters_num, BIT.date2num(date))
-
+        push!(quarters_num, Bit.date2num(date))
     end
+
     horizons = [1, 2, 4, 8, 12]
     number_horizons = length(horizons)
     number_variables = 5
     presample = 4
 
+    # New folder structure based on parameters
+    model_folder =
+        (empirical_distribution ? "/empirical" : "/calibrated") *
+        (abmx ? (unconditional_forecasts ? "/abmx_uf" : "/abmx") : "/abm") *
+        "/short_run/predictions/"
 
     data = matread(("./src/utils/" * "calibration_data/" * country * "/data/1996.mat"))
     data = data["data"]
 
-
     forecast = fill(NaN, number_quarters, number_horizons, number_variables)
     actual = fill(NaN, number_quarters, number_horizons, number_variables)
 
-
-
     quarter_num = quarters_num[1]
-    model = load("./data/" * country * "/abm_predictions/" * string(year(BIT.num2date(quarter_num))) * "Q" * string(Dates.quarterofyear(BIT.num2date(quarter_num))) *".jld2","model_dict");
-    number_of_seeds = size(model["real_gdp_quarterly"],2)
+    model_file =
+        "./data/" *
+        country *
+        model_folder *
+        string(year(Bit.num2date(quarter_num))) *
+        "Q" *
+        string(Dates.quarterofyear(Bit.num2date(quarter_num))) *
+        ".jld2"
+    model = load(model_file, "model_dict")
+    number_of_seeds = size(model["real_gdp_quarterly"], 2)
 
     for i in 1:number_quarters
         quarter_num = quarters_num[i]
 
-        global model = load("./data/" * country * "/abm_predictions/" * string(year(BIT.num2date(quarter_num))) * "Q" * string(Dates.quarterofyear(BIT.num2date(quarter_num))) *".jld2","model_dict");
-        
+        # Load model with new file path structure
+        model_file =
+            "./data/" *
+            country *
+            model_folder *
+            string(year(Bit.num2date(quarter_num))) *
+            "Q" *
+            string(Dates.quarterofyear(Bit.num2date(quarter_num))) *
+            ".jld2"
+
+        # Skip if the file doesn't exist (could happen for some parameter combinations)
+        if !isfile(model_file)
+            @warn "Model file not found: $model_file, skipping"
+            continue
+        end
+
+        global model = load(model_file, "model_dict")
+
         for j in 1:number_horizons
             global horizon = horizons[j]
             forecast_quarter_num = BIT.date2num(lastdayofmonth(BIT.num2date(quarter_num) + Month(3 * horizon)))
@@ -93,34 +118,63 @@ function error_table_abm(country::String = "italy")
         end
     end
 
-    mkpath(dirname(dir * "/forecast_abm.h5"))
-    h5open(dir * "/forecast_abm.h5", "w") do file
+    # Define the output structure based on parameters - removed "/short_run/"
+    output_folder =
+        dir *
+        "/tables/" *
+        country *
+        (empirical_distribution ? "/empirical" : "/calibrated") *
+        (abmx ? (unconditional_forecasts ? "/abmx_uf" : "/abmx") : "/abm")
+
+    # Create output directory
+    mkpath(output_folder)
+
+    # Path for forecast files - removed "/short_run/"
+    forecast_folder =
+        dir *
+        "/forecasts/" *
+        country *
+        (empirical_distribution ? "/empirical" : "/calibrated") *
+        (abmx ? (unconditional_forecasts ? "/abmx_uf" : "/abmx") : "/abm")
+
+    # Create forecast directory
+    mkpath(forecast_folder)
+
+    # Save forecast in the structured folder
+    h5open(forecast_folder * "/forecast_abm.h5", "w") do file
         write(file, "forecast", forecast)
     end
 
-    rmse_abm = dropdims(100 * sqrt.(nanmean((forecast - actual).^2,1)), dims=1)
-    bias_abm = dropdims(nanmean(forecast - actual, 1), dims=1)
+    rmse_abm = dropdims(100 * sqrt.(nanmean((forecast - actual) .^ 2, 1)), dims = 1)
+    bias_abm = dropdims(nanmean(forecast - actual, 1), dims = 1)
     error_abm = forecast - actual
 
+    # The AR model comparison remains the same
     file_path = dir * "/forecast_ar.h5"
 
     forecast = h5open(file_path, "r") do file
         read(file["forecast"])
     end
 
-    rmse_ar = dropdims(100 * sqrt.(nanmean((forecast - actual).^2,1)), dims=1)
+    rmse_ar = dropdims(100 * sqrt.(nanmean((forecast - actual) .^ 2, 1)), dims = 1)
     error_ar = forecast - actual
 
-    input_data = - round.( 100 * (rmse_abm .- rmse_ar) ./ rmse_ar, digits=1)
+    input_data = -round.(100 * (rmse_abm .- rmse_ar) ./ rmse_ar, digits = 1)
     input_data_S = fill("", size(input_data))
 
     for j in 1:length(horizons)
         h = horizons[j]
         for l in 1:number_variables
-            dm_error_abm = view(error_abm, :, j, l)[map(!,isnan.(view(error_abm, :, j, l)))]
-            dm_error_ar = view(error_ar, :, j, l)[map(!,isnan.(view(error_ar, :, j, l)))]
-            _, p_value = dmtest_modified(dm_error_abm,dm_error_ar, h)
-            input_data_S[j, l] = string(input_data[j, l]) * "(" * string(round(p_value, digits=2)) *", "* string(stars(p_value)) * ")"
+            dm_error_abm = view(error_abm, :, j, l)[map(!, isnan.(view(error_abm, :, j, l)))]
+            dm_error_ar = view(error_ar, :, j, l)[map(!, isnan.(view(error_ar, :, j, l)))]
+            _, p_value = dmtest_modified(dm_error_abm, dm_error_ar, h)
+            input_data_S[j, l] =
+                string(input_data[j, l]) *
+                "(" *
+                string(round(p_value, digits = 2)) *
+                ", " *
+                string(stars(p_value)) *
+                ")"
         end
     end
 
@@ -131,36 +185,57 @@ function error_table_abm(country::String = "italy")
     booktabs = false
     makeCompleteLatexDocument = false
 
-    latex = latexTableContent(input_data_S, tableRowLabels, dataFormat, tableColumnAlignment, tableBorders, booktabs, makeCompleteLatexDocument)
+    latex = latexTableContent(
+        input_data_S,
+        tableRowLabels,
+        dataFormat,
+        tableColumnAlignment,
+        tableBorders,
+        booktabs,
+        makeCompleteLatexDocument,
+    )
 
-    open(dir * "/rmse_abm.tex", "w") do fid
+    # Save RMSE table in the structured folder
+    open(output_folder * "/rmse_abm.tex", "w") do fid
         for line in latex
             write(fid, line * "\n")
         end
     end
 
-
-    input_data = round.(bias_abm, digits=4)
+    # Bias calculation remains the same
+    input_data = round.(bias_abm, digits = 4)
     input_data_S = fill("", size(input_data))
 
     for j in 1:length(horizons)
-        
         h = horizons[j]
         for l in 1:number_variables
-            mz_forecast = (view(error_abm, :, j, l) + view(actual, :, j, l))[map(!,isnan.(view(error_abm, :, j, l) + view(actual, :, j, l)))]
-            mz_actual = view(actual, :, j, l)[map(!,isnan.(view(actual, :, j, l)))]
+            mz_forecast = (view(error_abm, :, j, l) + view(actual, :, j, l))[map(
+                !,
+                isnan.(view(error_abm, :, j, l) + view(actual, :, j, l)),
+            )]
+            mz_actual = view(actual, :, j, l)[map(!, isnan.(view(actual, :, j, l)))]
             _, _, p_value = mztest(mz_actual, mz_forecast)
-            input_data_S[j, l] = string(input_data[j, l]) * " (" * string(round(p_value, digits=3)) *", "* stars(p_value) * ")"
+            input_data_S[j, l] =
+                string(input_data[j, l]) * " (" * string(round(p_value, digits = 3)) * ", " * stars(p_value) * ")"
         end
     end
 
-    latex = latexTableContent(input_data_S, tableRowLabels, dataFormat, tableColumnAlignment, tableBorders, booktabs, makeCompleteLatexDocument)
+    latex = latexTableContent(
+        input_data_S,
+        tableRowLabels,
+        dataFormat,
+        tableColumnAlignment,
+        tableBorders,
+        booktabs,
+        makeCompleteLatexDocument,
+    )
 
-    open(dir * "/bias_abm.tex", "w") do fid
+    # Save bias table in the structured folder
+    open(output_folder * "/bias_abm.tex", "w") do fid
         for line in latex
             write(fid, line * "\n")
         end
     end
+
     return nothing
 end
-

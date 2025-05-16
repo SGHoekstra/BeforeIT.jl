@@ -74,10 +74,10 @@ function init_workers(parameters, initial_conditions, firms; typeInt = Int64, ty
     I_d_h = zeros(typeFloat, length(ids))
     C_h = zeros(typeFloat, length(ids))
     I_h = zeros(typeFloat, length(ids))
-
+    D_h_lagged = zeros(typeFloat, length(ids))
     
     # active workers (both employed and unemployed)
-    w_act_args = (Y_h, D_h, K_h, w_h, O_h, C_d_h, I_d_h, C_h, I_h)
+    w_act_args = (Y_h, D_h, D_h_lagged, K_h, w_h, O_h, C_d_h, I_d_h, C_h, I_h)
     workers_act = Workers(w_act_args...)
     
     # inactive workers
@@ -97,8 +97,9 @@ function init_workers(parameters, initial_conditions, firms; typeInt = Int64, ty
     I_d_h = zeros(typeFloat, length(ids))
     C_h = zeros(typeFloat, length(ids))
     I_h = zeros(typeFloat, length(ids))
+    D_h_lagged = zeros(typeFloat, length(ids))
 
-    w_inact_args = (Y_h, D_h, K_h, w_h_inact, O_h_inact, C_d_h, I_d_h, C_h, I_h)
+    w_inact_args = (Y_h, D_h, D_h_lagged, K_h, w_h_inact, O_h_inact, C_d_h, I_d_h, C_h, I_h)
     workers_inact = Workers(w_inact_args...)
 
     return workers_act, workers_inact, V_i_new, w_act_args, w_inact_args

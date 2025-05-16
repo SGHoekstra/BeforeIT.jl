@@ -49,8 +49,11 @@ function init_bank(parameters, initial_conditions, firms; typeInt = Int64, typeF
     K_h = K_h
     D_h = D_h
     Pi_e_k = typeFloat(0.0)
+    D_k_lagged = typeFloat(0.0)
+    D_h_lagged = typeFloat(0.0)
+    E_k_lagged = typeFloat(0.0)
 
-    bank_args = (E_k, Pi_k, Pi_e_k, D_k, r, Y_h, C_d_h, I_d_h, C_h, I_h, K_h, D_h)
+    bank_args = (E_k, E_k_lagged, Pi_k, Pi_e_k, D_k, D_k_lagged, r, Y_h, C_d_h, I_d_h, C_h, I_h, K_h, D_h, D_h_lagged)
     bank = Bank(bank_args...)
 
     return bank, bank_args
@@ -82,8 +85,9 @@ function init_central_bank(parameters, initial_conditions; typeInt = Int64, type
     xi_pi = parameters["xi_pi"]
     xi_gamma = parameters["xi_gamma"]
     E_CB = initial_conditions["E_CB"]
-    
-    cb_args = (r_bar, r_G, rho, r_star, pi_star, xi_pi, xi_gamma, E_CB)
+    E_CB_lagged = initial_conditions["E_CB"]
+
+    cb_args = (r_bar, r_G, rho, r_star, pi_star, xi_pi, xi_gamma, E_CB, E_CB_lagged)
     central_bank = CentralBank(cb_args...)
     
     return central_bank, cb_args

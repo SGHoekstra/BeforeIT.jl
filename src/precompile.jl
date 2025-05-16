@@ -2,8 +2,10 @@
 using PrecompileTools
 
 @setup_workload let
-    parameters = Bit.AUSTRIA2010Q1.parameters
-    initial_conditions = Bit.AUSTRIA2010Q1.initial_conditions
+    country = "netherlands"
+    parameters = load(pwd() * "/data/$(country)/parameters/2010Q1.jld2");
+    initial_conditions = load(pwd() * "/data/$(country)/initial_conditions/2010Q1.jld2");
+    
     T = 1
     @compile_workload let
         model = Bit.init_model(parameters, initial_conditions, T)

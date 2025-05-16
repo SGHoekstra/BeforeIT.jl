@@ -111,7 +111,6 @@ function handle_run_simulation(req)
         
         # Get parameters and create dictionary
         params = body["params"]
-        param_dict = Dict("theta_UNION" => params[1])
 
         # Get simulation parameters
         sim_start_date = DateTime(body["start_date"])
@@ -119,17 +118,19 @@ function handle_run_simulation(req)
         
         num_simulations = get(body, "num_simulations", 1)
         multi_threading = get(body, "multi_threading", true)
+        abmx = get(body, "abmx", false)
         
-        @info "Running simulation with $(length(params)) parameters, $(num_simulations) simulations"
+        @info "Running simulation with $(length(params)) parameters, $(num_simulations) simulations, abmx: $abmx"
         
         # Run simulation
         sim_result = BeforeIT.run_abm_simulations_with_parameters(
             global_models, 
-            param_dict,
+            params,
             sim_start_date,
             sim_end_date;
             num_simulations=num_simulations,
-            multi_threading=multi_threading
+            multi_threading=multi_threading,
+            abmx = abmx,
         )
         
         # Return result

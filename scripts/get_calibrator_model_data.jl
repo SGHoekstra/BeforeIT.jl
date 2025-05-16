@@ -1,5 +1,5 @@
 # Load necessary packages
-import BeforeIT as BIT
+import BeforeIT
 using Dates, FileIO
 
 
@@ -39,11 +39,12 @@ Runs the economic model for multiple simulations and returns a structured matrix
 
 function run_abm_simulations_with_parameters(
     models,
-    par_dict::Dict,
+    params,
     start_date::DateTime,
     end_date::DateTime;
     num_simulations::Int = 10,
     multi_threading::Bool = false,
+    abmx::Bool = false,
 )
 
     # Extract variables used in the script
@@ -102,28 +103,27 @@ function run_abm_simulations_with_parameters(
         # Set T to the difference, with a maximum of 12
         T = min(quarters_diff, 12)
 
-        model.prop.theta_UNION = par_dict["theta_UNION"]
-        
+        model.prop.theta_UNION = params[1]
+        model.prop.phi_DP = params[2]
+        model.prop.phi_F_Q = params[3]
+
         # Run simulations
-        sims = BIT.ensemblerun(model, num_simulations; multi_threading = multi_threading)
+        sims = Bit.ensemblerun(model, num_simulations; multi_threading = multi_threading, abmx = abmx)
 
         
-        predictions = BIT.get_predictions_from_sims_directly(data, sims, quarter_num, T, S)
+        predictions = Bit.get_predictions_from_sims_directly(data, sims, quarter_num, T, S)
 
         transformed_predictions = hcat(collect([
             log.(predictions["real_gdp_quarterly"]),
             log.(1 .+ predictions["gdp_deflator_growth_quarterly"]),
             log.(predictions["real_household_consumption_quarterly"]),
             log.(predictions["real_fixed_capitalformation_quarterly"]),
-            (1 .+ predictions["euribor"]).^(1/4)
+            log.(predictions["wages_quarterly"])
             ])...)
 
         output[1:(T + 1), (idx - 1) * M * S + 1 : idx * M * S ] = transformed_predictions
     end
     
-
-
-
     
     return output
 end
@@ -172,12 +172,10 @@ function get_models(
         T = min(quarters_diff, 12)
         
 
-        # Initialize model with parameters for this quarter
-        initial_conditions = load("./src/utils/parameters_initial_conditions_data/netherlands/initial_conditions/" * 
+        initial_conditions = load("./data/netherlands/initial_conditions/" * 
                                  string(year(quarter_date)) * "Q" * string(Dates.quarterofyear(quarter_date)) * ".jld2")
         
-        # Merge user parameters with defaults
-        parameters = load("./src/utils/parameters_initial_conditions_data/netherlands/parameters/" * 
+        parameters = load("./data/netherlands/parameters/" * 
                                            string(year(quarter_date)) * "Q" * string(Dates.quarterofyear(quarter_date)) * ".jld2")
         
         # Initialize model

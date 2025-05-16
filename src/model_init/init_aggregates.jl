@@ -17,15 +17,29 @@ Initialize aggregates for the model.
 - `agg_args`: The arguments used to initialize the aggregates.
 
 """
-function init_aggregates(parameters, initial_conditions, T; typeInt = Int64, typeFloat = Float64)
+function init_aggregates(parameters, initial_conditions, T; typeInt = Int64, typeFloat = Float64, conditional_forecast = false)
     
     Y = initial_conditions["Y"]
     pi_ = initial_conditions["pi"]
     Y = Vector{typeFloat}(vec(vcat(Y, zeros(typeFloat, T))))
     pi_ = Vector{typeFloat}(vec(vcat(pi_, zeros(typeFloat, T))))
-
     G = typeInt(parameters["G"])
 
+    if !conditional_forecast
+        C_G = initial_conditions["C_G"]
+        Y_I = initial_conditions["Y_I"]
+        C_E = initial_conditions["C_E"]
+        
+        if T > 12 
+            C_G = Vector{typeFloat}(vec(vcat(C_G, zeros(typeFloat, T-12))))
+            Y_I = Vector{typeFloat}(vec(vcat(Y_I, zeros(typeFloat, T-12))))
+            C_E = Vector{typeFloat}(vec(vcat(C_E, zeros(typeFloat, T-12))))
+        end
+    else #load all available data for conditional forecasts
+        C_G = initial_conditions["C_G_full"]
+        Y_I = initial_conditions["Y_I_full"]
+        C_E = initial_conditions["C_E_full"]
+    end
 
     P_bar = one(typeFloat)
     P_bar_g = ones(typeFloat, G)
@@ -58,6 +72,9 @@ function init_aggregates(parameters, initial_conditions, T; typeInt = Int64, typ
         epsilon_E,
         epsilon_I,
         t,
+        C_G,
+        C_E,
+        Y_I,
     )
 
     agg = Aggregates(agg_args...)

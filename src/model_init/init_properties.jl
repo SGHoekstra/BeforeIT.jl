@@ -31,6 +31,9 @@ function init_properties(parameters::Dict{String, Any}, T::Integer; typeInt::Dat
     properties[:psi_H] = typeFloat(parameters["psi_H"])      # Fraction of income devoted to investment in housing
     properties[:mu] = typeFloat(parameters["mu"])         # Risk premium on policy rate
 
+    properties[:phi_F_Q] = 1.0 # Demand adjustment speed on firm growth
+    properties[:phi_DP] = 1.0 # Influence of demand-pull inflation on prices
+
     # banking related parameters
     properties[:theta_DIV] = typeFloat(parameters["theta_DIV"])  # Dividend payout ratio
     properties[:theta] = typeFloat(parameters["theta"])      # Rate of installment on debt
@@ -40,6 +43,8 @@ function init_properties(parameters::Dict{String, Any}, T::Integer; typeInt::Dat
 
     # Union related parameters
     properties[:theta_UNION] = 1.0
+
+
 
     # products related parameters
     b_CF_g = parameters["b_CF_g"]  

@@ -12,11 +12,10 @@ function load_timeseries_for_calibrator(
     start_date::DateTime,
     end_date::DateTime;
     apply_transformations::Bool = true,
-    data_path::String = "./src/utils/calibration_data/netherlands/data/1996.mat",
     repetitions::Int = 1
 )
     # Load the data
-    data = matread(data_path)["data"]
+    data = BIT.NETHERLANDS_CALIBRATION.data
     
     # Extract variables used in the script
     variables = [
@@ -24,7 +23,7 @@ function load_timeseries_for_calibrator(
         "gdp_deflator_growth_quarterly",
         "real_household_consumption_quarterly", 
         "real_fixed_capitalformation_quarterly",
-        "euribor"
+        "wages_quarterly"
     ]
     
     start_num = BIT.date2num(start_date)
@@ -76,12 +75,13 @@ function load_timeseries_for_calibrator(
                     if apply_transformations
                         if var_name == "real_gdp_quarterly" || 
                            var_name == "real_household_consumption_quarterly" || 
-                           var_name == "real_fixed_capitalformation_quarterly"
+                           var_name == "real_fixed_capitalformation_quarterly" ||
+                           var_name == "wages_quarterly"
                             value = log(value)
                         elseif var_name == "gdp_deflator_growth_quarterly"
                             value = log(1 + value)
-                        elseif var_name == "euribor"
-                            value = (1 + value)^(1/4)
+                        else 
+                            throw(ArgumentError("Unknown variable for transformation: $var_name"))
                         end
                     end
                     

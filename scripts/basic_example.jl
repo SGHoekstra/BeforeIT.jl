@@ -12,17 +12,17 @@ using FileIO, Plots
 year_i = 2019
 quarter = 4
 
-country = "netherlands"
-#country = "italy"
+#country = "netherlands"
+country = "italy"
 
-parameters = load(pwd() * "/src/utils/parameters_initial_conditions_data/$(country)/parameters/"* string(year_i) *"Q"* string(quarter) *".jld2");
-initial_conditions = load(pwd() * "/src/utils/parameters_initial_conditions_data/$(country)/initial_conditions/"* string(year_i) *"Q"* string(quarter) *".jld2");
+parameters = load(pwd() * "/data/$(country)/parameters/"* string(year_i) *"Q"* string(quarter) *".jld2");
+initial_conditions = load(pwd() * "/data/$(country)/initial_conditions/"* string(year_i) *"Q"* string(quarter) *".jld2");
 
 # To run mu
 # We can now initialise the model, by specifying in advance the maximum number of epochs.
 
-T = 16
-model = Bit.init_model(parameters, initial_conditions, T)
+T = 12
+model = Bit.init_model(parameters, initial_conditions, T; conditional_forecast = false)
 
 # Note that the it is very simple to inspect the model by typing
 
@@ -39,7 +39,7 @@ data = Bit.init_data(model);
 # We can run now the model for a number of epochs and progressively update the data tracker.
 
 for t in 1:T
-    Bit.step!(model; multi_threading = true)
+    Bit.step!(model; multi_threading = true, abmx = true)
     Bit.update_data!(data, model)
 end
 
@@ -59,9 +59,11 @@ plot(ps..., layout = (3, 3))
 
 model = Bit.init_model(parameters, initial_conditions, T)
 
-model.prop.theta_UNION = 0.8
+model.prop.theta_UNION = 1.0
+model.prop.phi_DP = 1.0
+model.prop.phi_F_Q = 1.0
 
-data_vector = Bit.ensemblerun(model, 20)
+data_vector = Bit.ensemblerun(model, 50; multi_threading = true, abmx = true, conditional_forecast = false)
 
 # Note that this will use the number of threads specified when activating the Julia environment.
 # To discover the number of threads available, you can use the command 

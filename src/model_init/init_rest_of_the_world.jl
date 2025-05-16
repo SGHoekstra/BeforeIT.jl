@@ -39,6 +39,8 @@ function init_rotw(parameters, initial_conditions; typeInt = Int64, typeFloat = 
     gamma_EA = typeFloat(0.0)
     pi_EA = initial_conditions["pi_EA"]
     D_RoW = typeFloat(initial_conditions["D_RoW"])
+    D_RoW_lagged = typeFloat(initial_conditions["D_RoW"])
+
     Y_I = Vector{typeFloat}(vec(initial_conditions["Y_I"]))
     C_E = Vector{typeFloat}(vec(initial_conditions["C_E"]))
     
@@ -50,6 +52,8 @@ function init_rotw(parameters, initial_conditions; typeInt = Int64, typeFloat = 
     Q_m = Vector{typeFloat}(zeros(G))
     Q_d_m = Vector{typeFloat}(zeros(G))
     P_m = Vector{typeFloat}(zeros(G))
+
+
 
     rotw_args = (
         alpha_E,
@@ -68,6 +72,7 @@ function init_rotw(parameters, initial_conditions; typeInt = Int64, typeFloat = 
         beta_Y_EA,
         sigma_Y_EA,
         D_RoW,
+        D_RoW_lagged,
         Y_I[T_prime],
         C_E[T_prime],
         C_d_l,

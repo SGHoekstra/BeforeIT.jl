@@ -385,6 +385,27 @@ function get_params_and_initial_conditions(calibration_object, calibration_date;
         fill(NaN, max(0, T_calibration_exo + T - T_calibration_exo_max), 1)
     ]
 
+    C_G_full = 
+        timescale *
+        sum(government_consumption) *
+        data["real_government_consumption_quarterly"][T_estimation_exo:T_calibration_exo_max] / 
+        data["real_government_consumption_quarterly"][T_calibration_exo]
+      
+    C_E_full = 
+        timescale *
+        sum(exports - reexports) *
+        data["real_exports_quarterly"][T_estimation_exo:T_calibration_exo_max] /
+        data["real_exports_quarterly"][T_calibration_exo]
+    Y_I_full = 
+        timescale *
+        sum(imports) *
+        data["real_imports_quarterly"][T_estimation_exo:T_calibration_exo_max] /
+        data["real_imports_quarterly"][T_calibration_exo]
+
+    C_G_full = vcat(C_G_full...)
+    C_E_full = vcat(C_E_full...)
+    Y_I_full = vcat(Y_I_full...)
+
     # define a dictionary of parameters to save in jld2 format
     initial_conditions = [
         ("D_I", D_I),
@@ -408,6 +429,11 @@ function get_params_and_initial_conditions(calibration_object, calibration_date;
         ("C_G", C_G),
         ("C_E", C_E),
         ("Y_I", Y_I),
+
+        ("C_G_full", C_G_full),
+        ("C_E_full", C_E_full),
+        ("Y_I_full", Y_I_full),
+
     ]
     initial_conditions = Dict(initial_conditions)
 
@@ -1236,6 +1262,27 @@ function get_params_and_initial_conditions_netherlands(calibration_object, calib
 
     r_bar_series = (data["euribor"][T_estimation_exo:T_calibration_exo] .+ 1.0) .^ (1.0 / 4.0) .- 1
 
+    C_G_full = 
+        timescale *
+        sum(government_consumption) *
+        data["real_government_consumption_quarterly"][T_estimation_exo:T_calibration_exo_max] / 
+        data["real_government_consumption_quarterly"][T_calibration_exo]
+      
+    C_E_full = 
+        timescale *
+        sum(exports - reexports) *
+        data["real_exports_quarterly"][T_estimation_exo:T_calibration_exo_max] /
+        data["real_exports_quarterly"][T_calibration_exo]
+    Y_I_full = 
+        timescale *
+        sum(imports) *
+        data["real_imports_quarterly"][T_estimation_exo:T_calibration_exo_max] /
+        data["real_imports_quarterly"][T_calibration_exo]
+
+    C_G_full = vcat(C_G_full...)
+    C_E_full = vcat(C_E_full...)
+    Y_I_full = vcat(Y_I_full...)
+
     # define a dictionary of parameters to save in jld2 format
     initial_conditions = [
         ("D_I", D_I),
@@ -1259,6 +1306,9 @@ function get_params_and_initial_conditions_netherlands(calibration_object, calib
         ("C_G", C_G),
         ("C_E", C_E),
         ("Y_I", Y_I),
+        ("C_G_full", C_G_full),
+        ("C_E_full", C_E_full),
+        ("Y_I_full", Y_I_full),
         ("disposable_income", disposable_income),
         ("household_consumption", psi * disposable_income),
         ("r_bar_series", r_bar_series)

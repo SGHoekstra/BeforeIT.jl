@@ -58,9 +58,10 @@ function firms_expectations_and_decisions(firms, model)
             pi_d_i[i] = 0;
         end
     end
-    
+    pi_d_i = min.(pi_d_i, 0.3) # cap the price adjustment to 30%. Otherwise it can reach 200% in some cases
+
     #Q_s_i = firms.Q_s_i .* (1 + gamma_e) IIASA
-    Q_s_i = firms.Q_s_i .* (1 .+ gamma_e) .* (1 .+ gamma_d_i)
+    Q_s_i = firms.Q_s_i .* (1 .+ gamma_e) .* (1 .+ model.prop.phi_F_Q * gamma_d_i)
 
     # price setting
     # dividing equation for pi_c_i into smaller pieces
@@ -73,8 +74,10 @@ function firms_expectations_and_decisions(firms, model)
     pi_c_i = pi_l_i .+ pi_k_i .+ pi_m_i
 
     # new_P_i = firms.P_i .* (1 .+ pi_c_i) .* (1 + pi_e) IASSA 
-    new_P_i = firms.P_i .* (1 .+ pi_c_i) .* (1 + pi_e) .* (1 .+ pi_d_i)
-
+    new_P_i = firms.P_i .* (1 .+ pi_c_i) .* (1 + pi_e) .* (1 .+ model.prop.phi_DP * pi_d_i)
+    #println("max: ",maximum(gamma_d_i))
+    #println("min: ",minimum(gamma_d_i))
+    #println("mean: ",mean(gamma_d_i))
     # target investments in capital
     I_d_i = firms.delta_i ./ firms.kappa_i .* min(Q_s_i, firms.K_i .* firms.kappa_i)
 

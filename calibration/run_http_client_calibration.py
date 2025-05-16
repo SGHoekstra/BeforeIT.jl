@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from black_it.calibrator import Calibrator
-from black_it.loss_functions.msm import MethodOfMomentsLoss
 from black_it.loss_functions.minkowski import MinkowskiLoss
 from black_it.samplers.best_batch import BestBatchSampler
 from black_it.samplers.halton import HaltonSampler
@@ -17,14 +16,20 @@ from black_it.samplers.random_forest import RandomForestSampler
 # Import the HTTP-based ServerMonitor instead of file-based one
 from calibration.beforeit_http_client import ServerMonitor
 
+# Best parameters: [0.14 0.08 0.01] with ar expectations
+
+
+# Best parameters: [0.31 0.83 0.15] with arx expectations 50 runs
+# Minimum loss: 1.7815447774230684 
+
 # Configuration
 num_servers = 4  # Number of server instances
 batch_size = 5
-bounds = [[0.0], [1.1]]
-precisions = [0.01]
+bounds = [[0.0, 0.0, 0.0], [1.1, 1.0, 1.0]]
+precisions = [0.01, 0.01, 0.01]
 start_date = "2010-03-31"
 end_date = "2013-12-31"
-num_iterations = 50  # Number of calibration iterations
+num_iterations = 5  # Number of calibration iterations
 saving_folder = f'calibration_union'
 os.makedirs(saving_folder, exist_ok=True)
 
@@ -85,7 +90,7 @@ except Exception as e:
     sys.exit(1)
 
 
-def abm_wrapper(params, sim_length=None, seed=None):
+def abm_wrapper(params, sim_length=None, seed=None, abmx = False):
     """Wrapper for BeforeIT simulations for Black-it"""
     try:
         # Convert NumPy arrays to lists for JSON serialization if needed
@@ -100,6 +105,7 @@ def abm_wrapper(params, sim_length=None, seed=None):
             start_date=start_date,
             end_date=end_date,
             num_simulations=10,
+            abmx=abmx,
         )
 
         return result.T
@@ -109,7 +115,7 @@ def abm_wrapper(params, sim_length=None, seed=None):
         return np.zeros_like(real_data)
     
 # Test the function with some dummy parameters
-test_params = np.array([0.9])
+test_params = np.array([0.9, 0.5,0.5])
 result = abm_wrapper(test_params)
 print("\nTest with valid parameters:")
 print("Result shape:", result.shape)
@@ -123,6 +129,7 @@ best_batch_sampler = BestBatchSampler(batch_size=batch_size)
 samplers = [halton_sampler, random_forest_sampler, best_batch_sampler]
 
 # Define custom loss function
+from black_it.loss_functions.base import BaseLoss
 class EconomicTimeSeriesRMSE(BaseLoss):
     def __init__(
         self,
@@ -281,16 +288,15 @@ class EconomicTimeSeriesRMSE(BaseLoss):
             
         return rmse
 
-# Import for custom loss function
-from black_it.loss_functions.base import BaseLoss
+
     
 # Variable weights based on the RMSE values in the table
 variable_weights = [
     1.0,    # GDP
-    3.5,    # Inflation
+    1.0,    # Inflation
     1.0,    # Household Consumption
-    0.6,    # Investment
-    12.0    # Euribor
+    1.0,    # Investment
+    1.0     # wages 
 ]
 
 # Initialize the custom loss function
@@ -299,6 +305,10 @@ custom_loss = EconomicTimeSeriesRMSE(
     period_weights=[1.0] * 25,  # Equal weights for periods
     horizon_weights=[1.0] * 5   # Equal weights for horizons
 )
+
+# Calculate the RMSE for the test result and real data
+rmse_value = custom_loss.compute_loss(result, real_data)
+print(f"Test custom RMSE value: {rmse_value}")
 
 # Initialize the Calibrator
 print("Initializing calibrator...")
@@ -319,7 +329,7 @@ print(f"Starting calibration with {5} iterations...")
 start_time = time.time()
 
 try:
-    params, losses = cal.calibrate(5)
+    params, losses = cal.calibrate(50)
     end_time = time.time()
     
     # Log results
@@ -423,6 +433,3 @@ except Exception as e:
 
 print("Calibration process completed")
 
-# Calculate the RMSE for the test result and real data
-rmse_value = custom_loss.compute_loss(result, real_data)
-print(f"Test RMSE value: {rmse_value}")

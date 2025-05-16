@@ -19,14 +19,14 @@ for each epoch using `Bit.step!(model)` and `Bit.update_data!(data, model)` resp
 model = Bit.init_model(parameters, initial_conditions, T)
 data = run!(model)
 """
-function run!(model::AbstractModel; multi_threading = false, shock = NoShock())
+function run!(model::AbstractModel; multi_threading = false, shock = NoShock(), abmx = false, conditional_forecast = false)
 
     data = Bit.init_data(model)
 
     T = model.prop.T
 
     for _ in 1:T
-        Bit.step!(model; multi_threading = multi_threading, shock = shock)
+        Bit.step!(model; multi_threading = multi_threading, shock = shock, abmx = abmx, conditional_forecast = conditional_forecast)
         Bit.update_data!(data, model)
     end
 
@@ -48,20 +48,20 @@ data objects of dimension `n_sims`.
 # Returns
 - `data_vector`: A vector containing the data objects collected during each simulation.
 """
-function ensemblerun(model::AbstractModel, n_sims; multi_threading = true, shock = NoShock())
+function ensemblerun(model::AbstractModel, n_sims; multi_threading = true, shock = NoShock(), abmx = false, conditional_forecast = false)
 
     data_vector = Vector{Bit.Data}(undef, n_sims)
 
     if multi_threading
         Threads.@threads for i in 1:n_sims
             model_i = deepcopy(model)
-            data = run!(model_i; shock = shock)
+            data = run!(model_i; shock = shock, abmx = abmx, conditional_forecast = conditional_forecast)
             data_vector[i] = data
         end
     else
         for i in 1:n_sims
             model_i = deepcopy(model)
-            data = run!(model_i; shock = shock)
+            data = run!(model_i; shock = shock, abmx = abmx, conditional_forecast = conditional_forecast)
             data_vector[i] = data
         end
     end

@@ -18,7 +18,7 @@ Returns:
 - model::Model: The initialized model.
 
 """
-function init_model(parameters::Dict{String, Any}, initial_conditions::Dict{String, Any}, T, typeInt::DataType = Int64, typeFloat::DataType = Float64)
+function init_model(parameters::Dict{String, Any}, initial_conditions::Dict{String, Any}, T, typeInt::DataType = Int64, typeFloat::DataType = Float64; conditional_forecast = false)
 
     # properties
     properties = Bit.init_properties(parameters, T; typeInt = typeInt, typeFloat = typeFloat)
@@ -43,7 +43,7 @@ function init_model(parameters::Dict{String, Any}, initial_conditions::Dict{Stri
     rotw, _ = Bit.init_rotw(parameters, initial_conditions; typeInt = typeInt, typeFloat = typeFloat)
 
     # aggregates
-    agg, _ = Bit.init_aggregates(parameters, initial_conditions, T; typeInt = typeInt, typeFloat = typeFloat)
+    agg, _ = Bit.init_aggregates(parameters, initial_conditions, T; typeInt = typeInt, typeFloat = typeFloat, conditional_forecast = conditional_forecast)
 
     # model
     model = Model(workers_act, workers_inact, firms, bank, central_bank, government, rotw, agg, properties)

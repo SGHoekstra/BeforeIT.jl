@@ -23,6 +23,7 @@ macro worker(T = Vector{Float64}, I = Vector{Int})
     return esc(quote
         Y_h::$T
         D_h::$T
+        D_h_lagged::$T
         K_h::$T
         w_h::$T
         O_h::$I
@@ -53,12 +54,15 @@ macro firm(T = Vector{Float64}, I = Vector{Int})
         K_i::$T
         M_i::$T
         L_i::$T
+        L_i_lagged::$T
         pi_bar_i::$T
         D_i::$T
+        D_i_lagged::$T
         Pi_i::$T
         V_i::$I
         I_i::$T
         E_i::$T
+        E_i_lagged::$T
         P_bar_i::$T
         P_CF_i::$T
         DS_i::$T
@@ -85,15 +89,18 @@ macro firm(T = Vector{Float64}, I = Vector{Int})
         I_h::$T
         K_h::$T
         D_h::$T
+        D_h_lagged::$T
     end)
 end
 
 macro bank(T = Float64)
     return esc(quote
         E_k::$T
+        E_k_lagged::$T
         Pi_k::$T
         Pi_e_k::$T
         D_k::$T
+        D_k_lagged::$T
         r::$T
         Y_h::$T
         C_d_h::$T
@@ -102,6 +109,7 @@ macro bank(T = Float64)
         I_h::$T
         K_h::$T
         D_h::$T
+        D_h_lagged::$T
     end)
 end
 
@@ -115,6 +123,7 @@ macro centralBank(T = Float64)
         xi_pi::$T
         xi_gamma::$T
         E_CB::$T
+        E_CB_lagged::$T
     end)
 end
 
@@ -126,6 +135,7 @@ macro government(T = Float64)
         Y_G::$T
         C_G::$T
         L_G::$T
+        L_G_lagged::$T
         sb_inact::$T
         sb_other::$T
         C_d_j::Vector{$T}
@@ -152,6 +162,7 @@ macro restOfTheWorld(T = Float64)
         beta_Y_EA::$T
         sigma_Y_EA::$T
         D_RoW::$T
+        D_RoW_lagged::$T
         Y_I::$T
         C_E::$T
         C_d_l::Vector{$T}
@@ -181,5 +192,8 @@ macro aggregates(T = Float64, I = Vector{Float64})
         epsilon_E::$T
         epsilon_I::$T
         t::$I
+        C_G::Vector{$T}
+        C_E::Vector{$T}
+        Y_I::Vector{$T}
     end)
 end

@@ -33,7 +33,7 @@ The expected inflation rate `pi_e` is calculated as follows:
 function growth_inflation_expectations(model)
     # unpack arguments
     Y = model.agg.Y
-    pi = model.agg.pi_
+    pi_ = model.agg.pi_
     T_prime = model.prop.T_prime
     t = model.agg.t
 
@@ -41,7 +41,9 @@ function growth_inflation_expectations(model)
     Y_e = exp(lY_e)                # expected GDP
     gamma_e = Y_e / Y[T_prime + t - 1] - 1                   # expected growth
 
-    lpi = estimate_next_value(pi[1:(T_prime + t - 1)])
+    
+    #pi_e = estimate_next_value(pi_[1:(T_prime + t - 1)])
+    lpi = estimate_next_value(pi_[1:(T_prime + t - 1)])
     pi_e = exp(lpi) - 1                                      # expected inflation rate
     return Y_e, gamma_e, pi_e
 end
@@ -162,4 +164,56 @@ function _sector_specific_priceindex(P_i, Y_i, P_m, Q_m)
     external = P_m * Q_m
     tot_quantity = sum(Y_i) + Q_m
     return (internal + external) / tot_quantity
+end
+
+
+function growth_inflation_VARX(model)
+    # unpack model variables
+    Y = model.agg.Y
+    pi = model.agg.pi_
+    T_prime = model.prop.T_prime
+    t = model.agg.t
+    agg = model.agg
+
+    #data = hcat(log.(Y[1:(T_prime + t - 1)]),pi[1:(T_prime + t - 1)]) #combine data for estimation
+    data = log.(Y[1:(T_prime + t - 1)]) #combine data for estimation
+    #exo = hcat(agg.r_bar_series[1:(T_prime + t - 1)],log.(agg.C_G[1:(T_prime + t - 1)]),log.(agg.C_E[1:(T_prime + t - 1)]))
+    exo = hcat(agg.r_bar_series[2:(T_prime + t)],log.(agg.C_G[2:(T_prime + t)]),log.(agg.C_E[2:(T_prime + t)]))
+
+    var = estimate_next_value_VARX(data, exo)
+
+    Y_e = exp(var)                # expected GDP
+    gamma_e = Y_e / Y[T_prime + t - 1] - 1                   # expected growth
+
+    data = pi[1:(T_prime + t - 1)]
+    var = estimate_next_value_VARX(data, exo)
+    pi_e = exp(var) - 1           # expected inflation rate
+    return Y_e, gamma_e, pi_e
+
+end
+
+function growth_inflation_ARX(model; conditional_forecast = false)
+    # unpack model variables
+    Y = model.agg.Y
+    pi = model.agg.pi_
+    T_prime = model.prop.T_prime
+    t = model.agg.t
+    agg = model.agg
+
+    data = hcat(log.(Y[1:(T_prime + t - 1)]),pi[1:(T_prime + t - 1)]) #combine data for estimation
+    
+    if conditional_forecast
+        exo = hcat(log.(agg.Y_I[1:(T_prime + t)]),log.(agg.C_G[1:(T_prime + t)]),log.(agg.C_E[1:(T_prime + t)]))
+    else
+        exo = hcat(log.(agg.Y_I[1:(T_prime + t - 1)]),log.(agg.C_G[1:(T_prime + t - 1)]),log.(agg.C_E[1:(T_prime + t - 1)]))
+    end
+
+    var = estimate_next_value_VARX(data, exo)
+
+    Y_e = exp(var[1])                # expected GDP
+    gamma_e = Y_e / Y[T_prime + t - 1] - 1                   # expected growth
+
+    pi_e = exp(var[2]) - 1           # expected inflation rate
+    return Y_e, gamma_e, pi_e
+
 end

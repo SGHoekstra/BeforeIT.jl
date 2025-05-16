@@ -66,6 +66,9 @@ include("../scripts/get_calibrator_data.jl")
 include("../scripts/get_calibrator_model_data.jl")
 include("utils/get_predictions_from_sims_directly.jl")
 
+# Visualisation
+include("utils/get_intersectoral_flows.jl") 
+
 # standard parameters
 include("utils/standard_params_initial_conditions.jl")
 include("utils/standard_calibration_data.jl")
