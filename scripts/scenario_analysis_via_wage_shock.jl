@@ -17,8 +17,20 @@ model = Bit.init_model(parameters, initial_conditions, T);
 
 # Simulate the baseline model for T quarters, N_reps times, and collect the data
 
-N_reps = 64
-data_vec_baseline = Bit.ensemblerun(model, N_reps)
+abmx = true
+N_reps = 24
+
+if abmx
+    model.prop.theta_UNION = 0.31
+    model.prop.phi_DP = 0.83
+    model.prop.phi_F_Q = 0.15
+else
+    model.prop.theta_UNION = 0.25
+    model.prop.phi_DP = 0.08
+    model.prop.phi_F_Q = 0.01
+end
+
+data_vec_baseline = Bit.ensemblerun(model, N_reps, abmx = abmx; multi_threading = true, conditional_forecast = false)
 
 # Now, apply a shock to the model and simulate it again.
 # A shock is simply a function that takes the model and changes some of
@@ -44,7 +56,7 @@ function (s::WageShock)(model::Bit.Model)
 end
 
 
-wage_shock = WageShock(1.04,4)
+wage_shock = WageShock(1.05,4)
 
 
 # Simulate the model with the shock

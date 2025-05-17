@@ -69,6 +69,17 @@ function generate_inflation_histograms(
 
     T = 16
     model = Bit.init_model(parameters, initial_conditions, T)
+
+    if abmx
+        model.prop.theta_UNION = 0.31
+        model.prop.phi_DP = 0.83
+        model.prop.phi_F_Q = 0.15
+    else
+        model.prop.theta_UNION = 0.25
+        model.prop.phi_DP = 0.08
+        model.prop.phi_F_Q = 0.01
+    end
+
     data = Bit.ensemblerun(model, 1, abmx = abmx, conditional_forecast = !unconditional_forecasts)
 
     # Create a 3×3 grid of subplots
@@ -133,5 +144,5 @@ function generate_inflation_histograms(
     return inflation_histograms
 end
 
-generate_inflation_histograms("netherlands"; empirical_distribution = false, abmx = false, unconditional_forecasts = true, year_i = 2019, quarter = 4)
-generate_inflation_histograms("netherlands"; empirical_distribution = false, abmx = true, unconditional_forecasts = true, year_i = 2019, quarter = 4)
+generate_inflation_histograms("netherlands"; empirical_distribution = false, abmx = false, unconditional_forecasts = true, year_i = 2019, quarter = 4);
+generate_inflation_histograms("netherlands"; empirical_distribution = false, abmx = true, unconditional_forecasts = true, year_i = 2019, quarter = 4);

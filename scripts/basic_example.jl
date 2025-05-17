@@ -9,11 +9,11 @@ using FileIO, Plots
 # We then initialise the model loading some precomputed set of parameters and by specifying a number of epochs.
 # In another tutorial we will illustrate how to compute parameters and initial conditions.
 
-year_i = 2019
-quarter = 4
+year_i = 2010
+quarter = 1
 
-#country = "netherlands"
-country = "italy"
+country = "netherlands"
+#country = "italy"
 
 parameters = load(pwd() * "/data/$(country)/parameters/"* string(year_i) *"Q"* string(quarter) *".jld2");
 initial_conditions = load(pwd() * "/data/$(country)/initial_conditions/"* string(year_i) *"Q"* string(quarter) *".jld2");

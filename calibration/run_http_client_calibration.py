@@ -299,6 +299,14 @@ variable_weights = [
     1.0     # wages 
 ]
 
+# Kies andere variabelen. Misschien consumptie eruit laten of minder laten wegen?
+# Ruimere sample pakken om de variabelen te schatten om zo de slechte economische tijden niet te overfitten.
+# Iets met weighting want 2013Q4 wordt misschien oversampled.
+
+# versie proberen met verschillende gewichten voor korte termijn en lange termijn
+# proberen met lager gewicht voor consumptie.
+# Proberen met de full sample van 2010-2019
+
 # Initialize the custom loss function
 custom_loss = EconomicTimeSeriesRMSE(
     variable_weights=variable_weights,

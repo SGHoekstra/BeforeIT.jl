@@ -1,5 +1,5 @@
 import BeforeIT as Bit
-using FileIO, Plots, Statistics
+using FileIO, Plots, Statistics, StatsPlots
 
 
 function generate_inflation_decomposition(
@@ -54,6 +54,17 @@ function generate_inflation_decomposition(
     n_runs = 32
 
     model = Bit.init_model(parameters, initial_conditions, T)
+
+    if abmx
+        model.prop.theta_UNION = 0.31
+        model.prop.phi_DP = 0.83
+        model.prop.phi_F_Q = 0.15
+    else
+        model.prop.theta_UNION = 0.25
+        model.prop.phi_DP = 0.08
+        model.prop.phi_F_Q = 0.01
+    end
+
     data_vector = Bit.ensemblerun(model, n_runs; multi_threading = true, abmx = abmx, conditional_forecast = !unconditional_forecasts)
 
     cost_push_inflation = reshape(data_vector.cost_push_inflation, T + 1, model.prop.I, n_runs)
@@ -199,5 +210,5 @@ function generate_inflation_decomposition(
     return (inflation_decomposition, inflation_decomposition_detailed)
 end
 
-generate_inflation_decomposition("netherlands"; empirical_distribution = false, abmx = false, unconditional_forecasts = true, year_i = 2019, quarter = 4)
-generate_inflation_decomposition("netherlands"; empirical_distribution = false, abmx = true, unconditional_forecasts = true, year_i = 2019, quarter = 4)
+generate_inflation_decomposition("netherlands"; empirical_distribution = false, abmx = false, unconditional_forecasts = true, year_i = 2016, quarter = 4);
+generate_inflation_decomposition("netherlands"; empirical_distribution = false, abmx = true, unconditional_forecasts = true, year_i = 2016, quarter = 4);
