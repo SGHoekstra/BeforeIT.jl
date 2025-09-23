@@ -61,6 +61,7 @@ include("utils/get_predictions_from_sims.jl")
 include("utils/dmtest.jl")
 include("utils/mztest.jl")
 include("utils/varx.jl")
+include("utils/correlation_utils.jl")
 
 # calibration
 include("utils/calibration.jl")

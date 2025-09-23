@@ -38,11 +38,11 @@ function extract_yq(files)
     Set([match(r"^(\d{4})Q(\d)\.jld2$", f).match for f in files if occursin(r"Q", f)])
 end
 
-function save_all_simulations(folder_name; T= 12, n_sims = 4)
+function save_all_simulations(folder_name; T= 12, n_sims = 4, simulation_suffix = "simulations")
 
     param_dir = folder_name * "/parameters/"
     init_dir = folder_name *"/initial_conditions/"
-    sim_dir = folder_name * "/simulations/"
+    sim_dir = folder_name * "/$(simulation_suffix)/"
 
     param_files = readdir(param_dir)
     init_files = readdir(init_dir)
@@ -71,11 +71,11 @@ function save_all_simulations(folder_name; T= 12, n_sims = 4)
     end
 end
 
-function save_all_predictions_from_sims(folder_name, real_data)
+function save_all_predictions_from_sims(folder_name, real_data; simulation_suffix = "simulations", prediction_suffix = "abm_predictions")
 
 
     # Load simulations
-    sim_folder = folder_name * "/simulations"
+    sim_folder = folder_name * "/$(simulation_suffix)"
 
     sim_files = readdir(sim_folder)
 
@@ -98,7 +98,7 @@ function save_all_predictions_from_sims(folder_name, real_data)
         sims = load(file_name)["data_vector"]
         predictions_dict = get_predictions_from_sims(sims, real_data, start_date)
         # save the predictions_dict
-        save(folder_name * "/abm_predictions/$(y)Q$(q).jld2", "predictions_dict", predictions_dict)
+        save(folder_name * "/$(prediction_suffix)/$(y)Q$(q).jld2", "predictions_dict", predictions_dict)
     end
 
 end

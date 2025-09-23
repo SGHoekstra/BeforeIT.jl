@@ -12,13 +12,13 @@ function error_table_validation_abm(country::String, ea, data, quarters, horizon
     actual = fill(NaN, number_quarters, number_horizons, number_variables)
 
     q = quarters_num[1]
-    model = load("./data/$(country)/abm_predictions/$(year(Bit.num2date(q)))Q$(quarterofyear(Bit.num2date(q))).jld2", "model_dict");
+    model = load("./data/$(country)/abm_predictions/$(year(Bit.num2date(q)))Q$(quarterofyear(Bit.num2date(q))).jld2", "predictions_dict");
     number_of_seeds = size(model["real_gdp_quarterly"], 2)
 
     for i in 1:number_quarters
 
         q = quarters_num[i]
-        model = load("./data/$(country)/abm_predictions/$(year(Bit.num2date(q)))Q$(quarterofyear(Bit.num2date(q))).jld2", "model_dict");
+        model = load("./data/$(country)/abm_predictions/$(year(Bit.num2date(q)))Q$(quarterofyear(Bit.num2date(q))).jld2", "predictions_dict");
 
         for j in 1:number_horizons
             horizon = horizons[j]
@@ -51,5 +51,5 @@ function error_table_validation_abm(country::String, ea, data, quarters, horizon
         end
     end
     save("data/$(country)/analysis/forecast_validation_abm.jld2", "forecast", forecast)
-    create_bias_rmse_tables_abm(forecast, actual, horizons, "validation", number_variables)
+    create_bias_rmse_tables_abm(forecast, actual, horizons, "validation", number_variables, country)
 end

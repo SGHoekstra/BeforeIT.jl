@@ -53,7 +53,7 @@ function error_table_validation_var(country::String, ea, data, quarters, horizon
             end
         end
 
-        create_bias_rmse_tables_var(forecast, actual, horizons, "validation", number_variables, k)
+        create_bias_rmse_tables_var(forecast, actual, horizons, "validation", "var", number_variables, k, country)
     end
     return nothing
 end
