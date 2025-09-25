@@ -15,7 +15,7 @@ RUN_ANALYSIS = true    # Set to true to run table generation
 
 # Simulation parameters
 T = 12
-N_SIMS = 25
+N_SIMS = 100
 QUARTERS = DateTime(2010, 03, 31):Dates.Month(3):DateTime(2019, 12, 31)
 HORIZONS = [1, 2, 4, 8, 12]
 
