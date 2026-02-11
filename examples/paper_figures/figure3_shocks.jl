@@ -7,9 +7,9 @@ Recreates Figure 3 from Dawid et al. (2024) "Implications of Behavioral
 Rules in Agent-Based Macroeconomics"
 
 This script computes IRFs for three shocks across four pricing models:
-1. Productivity shock: +5% permanent change in α_bar_i
-2. Government spending shock: +10% temporary (4 quarters)
-3. Import price shock: +10% temporary (4 quarters)
+1. Productivity shock: +10% permanent change in α_bar_i
+2. Government spending shock: +10% permanent level shift in C_G
+3. Import price shock: +10% permanent increase in P_m
 
 Models compared:
 - CANVAS: Demand-pull with cost-push
@@ -22,25 +22,31 @@ import BeforeIT as Bit
 using Dates, Statistics, JLD2
 using Plots, StatsPlots
 
-# Include the FULL model extensions (all use markup-based pricing P=(1+μ)×AC_e)
-include("CANVAS_full_extension.jl")  # Full CANVAS: δ_rec=1, δ_AC=0 (cost pass-through)
-include("CATS_full_extension.jl")    # Full CATS: δ_rec=1, δ_AC=1 (cost absorption)
-include("EUBI_full_extension.jl")    # Full EUBI: δ_rec=0, δ_MS=1, δ_P=1, δ_AC=1
-include("KS_full_extension.jl")      # Full KS: δ_rec=0, δ_MS=0.04, δ_AC=0
+# Make CalibrationData available in Main so JLD2 can deserialize it
+# (the .jld2 files store the type as Main.CalibrationData)
+const CalibrationData = Bit.CalibrationData
+
+# Include model extensions (all use markup-based pricing P=(1+μ)×AC_e)
+include("CANVAS_extension.jl")  # CANVAS: δ_rec=1, δ_AC=0 (cost pass-through)
+include("CATS_extension.jl")    # CATS: δ_rec=1, δ_AC=1 (cost absorption)
+include("EUBI_extension.jl")    # EUBI: δ_rec=0, δ_MS=1, δ_P=1, δ_AC=1
+include("KS_extension.jl")      # KS: δ_rec=0, δ_MS=0.04, δ_AC=0
 
 # =====================================================
-# CORRECTED SHOCK IMPLEMENTATIONS
+# SHOCK IMPLEMENTATIONS (matching DDGABM/simulate_abm.m)
 # =====================================================
-# The built-in shocks have bugs:
-# 1. ProductivityShock applies every step (compounds!)
-# 2. ImportPriceShock is overwritten by rotw_import_export
-# 3. GovernmentSpendingShock works through AR process
+# MATLAB pre-computes exogenous trajectories via AR, then applies shocks
+# as permanent level shifts to the ENTIRE future trajectory:
+#   Scenario 2: C_G(T_prime+1:end) = 1.1 .* C_G(T_prime+1:end)
+#   Scenario 3: P_I(T_prime+1:end) = 1.1 .* P_I(T_prime+1:end)
+#   Scenario 4: alpha_bar_i = 1.1 * alpha_bar_i
 #
-# These corrected versions apply shocks properly using model.agg.t checks
-# (not mutable state, which doesn't work with ensemblerun's shared shock)
+# BeforeIT.jl computes AR processes inline (not pre-computed), so we match
+# the MATLAB effect through equivalent mechanisms.
 
 """
-Corrected ProductivityShock - applies ONCE at t=1 only
+ProductivityShock - applies ONCE at t=1 (permanent change to α_bar_i).
+MATLAB: alpha_bar_i = 1.1 * alpha_bar_i (one-time, permanent)
 """
 struct ProductivityShockOnce <: Bit.AbstractShock
     multiplier::Float64
@@ -53,9 +59,13 @@ function (s::ProductivityShockOnce)(model::Bit.Model)
 end
 
 """
-Corrected GovernmentSpendingShock - directly multiplies C_G at t=1
-MATLAB (simulate_abm.m line 307-309): C_G(T_prime+1:end) = 1.1 .* C_G(T_prime+1:end)
-We multiply C_G once at t=1, which then persists through the AR(1) dynamics.
+GovSpendingShockPermanent - permanent level shift in government spending.
+
+For base Government (log-level AR): shifts intercept β_G += (1-α_G)*log(m)
+For GovernmentDDGABM (growth-rate AR): multiplies C_G directly at t=1.
+  MATLAB: C_G(T_prime+1:end) = 1.1 * C_G(T_prime+1:end)
+  With inline AR on growth rates, multiplying the initial level is sufficient
+  since the growth-rate AR naturally propagates the new level.
 """
 struct GovSpendingShockPermanent <: Bit.AbstractShock
     multiplier::Float64
@@ -63,25 +73,77 @@ end
 
 function (s::GovSpendingShockPermanent)(model::Bit.Model)
     if model.agg.t == 1
-        # EXACT MATLAB: directly multiply C_G by the multiplier
-        # The AR process will propagate this level change forward
-        model.gov.C_G = model.gov.C_G * s.multiplier
+        if model.gov isa AbstractGovernmentDDGABM
+            # DDGABM: multiply C_G directly (growth-rate AR preserves the level)
+            model.gov.C_G = model.gov.C_G * s.multiplier
+        else
+            # Base: shift the log-level AR intercept for permanent level change
+            model.gov.beta_G += (1 - model.gov.alpha_G) * log(s.multiplier)
+            model.gov.C_G = model.gov.C_G * s.multiplier
+        end
     end
 end
 
-# NOTE: Import price shock now uses built-in Bit.ImportPriceShock
-# which properly shocks P_I (exogenous import price index) matching DDGABM line 311:
-#   P_I(T_prime+1:end) = 1.1 .* P_I(T_prime+1:end)
-# P_I then propagates to P_m = P_I each period, affecting import prices without feedback
+# =====================================================
+# IMPORT PRICE SHOCK
+# =====================================================
+# For DDGABM RotW: multiply P_I directly at t=1 (growth-rate AR preserves level)
+# For base RotW: use _import_price_multiplier Ref + rotw_import_export override
 
-# =====================================================
-# CANVAS MODEL: Using Full CANVAS from CANVAS_full_extension.jl
-# =====================================================
-# Full CANVAS uses markup-based pricing: P = (1+μ) × AC_e
-# This correctly transmits productivity shocks:
-#   α↑ → AC_e↓ → P↓ → demand↑ → GDP↑
-#
-# Note: create_full_canvas_model is defined in CANVAS_full_extension.jl
+"""
+ImportPriceShockPermanent - permanent level shift in import prices.
+
+For RestOfTheWorldDDGABM: multiplies P_I at t=1. The deflator AR on pi_I
+naturally propagates the new price level.
+MATLAB: P_I(T_prime+1:end) = 1.1 * P_I(T_prime+1:end)
+
+For base RestOfTheWorld: uses _import_price_multiplier Ref (set externally).
+"""
+struct ImportPriceShockPermanent <: Bit.AbstractShock
+    multiplier::Float64
+end
+
+function (s::ImportPriceShockPermanent)(model::Bit.Model)
+    if model.agg.t == 1
+        if model.rotw isa AbstractRestOfTheWorldDDGABM
+            # DDGABM: multiply P_I directly (deflator AR preserves the level)
+            model.rotw.P_I = model.rotw.P_I * s.multiplier
+        end
+        # For base RotW, _import_price_multiplier is set externally before ensemblerun
+    end
+end
+
+const _import_price_multiplier = Ref(1.0)
+
+const ExtensionFirms = Union{
+    AbstractFirmsCANVAS, AbstractFirmsCATS,
+    AbstractFirmsEUBI, AbstractFirmsKS
+}
+
+# Override for base RotW with extension firms (non-DDGABM path)
+# DDGABM RotW has its own override in DDGABM_exogenous_extension.jl
+function Bit.rotw_import_export(
+    rotw::Bit.RestOfTheWorld,
+    model::Bit.Model{<:Bit.AbstractWorkers, <:Bit.AbstractWorkers, <:ExtensionFirms,
+                      <:Bit.AbstractBank, <:Bit.AbstractCentralBank, <:Bit.AbstractGovernment,
+                      <:Bit.AbstractRestOfTheWorld, <:Bit.AbstractAggregates}
+)
+    c_E_g = model.prop.c_E_g
+    c_I_g = model.prop.c_I_g
+    P_bar_g = model.agg.P_bar_g
+    pi_e = model.agg.pi_e
+    epsilon_E, epsilon_I = model.agg.epsilon_E, model.agg.epsilon_I
+
+    L = size(rotw.C_d_l, 1)
+    C_E = exp.(rotw.alpha_E * log(rotw.C_E) + rotw.beta_E + epsilon_E)
+    C_d_l = C_E ./ L .* ones(L) .* sum(c_E_g .* P_bar_g) .* (1 + pi_e)
+
+    Y_I = exp(rotw.alpha_I * log(rotw.Y_I) + rotw.beta_I .+ epsilon_I)
+    Y_m = c_I_g * Y_I
+    P_m = P_bar_g * (1 + pi_e) .* _import_price_multiplier[]
+
+    return C_E, Y_I, C_d_l, Y_m, P_m
+end
 
 # =====================================================
 # MODEL CREATORS
@@ -102,32 +164,24 @@ end
 
 const MODEL_CREATORS = Dict(
     :standard => create_standard_model,
-    :canvas => create_full_canvas_model,  # Full CANVAS with P=(1+μ)×AC_e
-    :cats => create_full_cats_model,      # Full CATS with P=(1+μ)×AC_e
-    :eubi => create_full_eubi_model,      # Full EUBI with P=(1+μ)×AC_e
-    :ks => create_full_ks_model,          # Full KS with P=(1+μ)×AC_e
+    :canvas => create_canvas_model,
+    :cats => create_cats_model,
+    :eubi => create_eubi_model,
+    :ks => create_ks_model,
 )
 
 # =====================================================
-# SHOCK DEFINITIONS (using new shocks from src/shocks/shocks.jl)
+# SHOCK DEFINITIONS
 # =====================================================
-
-# Paper shocks are PERMANENT for entire simulation horizon (from simulate_abm.m):
-# - Scenario 2: C_G(T_prime+1:end)=1.1.*C_G(T_prime+1:end)  -> permanent +10%
-# - Scenario 3: P_I(T_prime+1:end)=1.1.*P_I(T_prime+1:end)  -> permanent +10%
-# - Scenario 4: alpha_bar_i=1.1*alpha_bar_i                  -> permanent +10%
-#
-# Shock implementations:
-# - ProductivityShockOnce: applies alpha_bar_i multiplier once at t=1
-# - GovSpendingShockPermanent: shifts AR intercept for permanent level change
-# - Bit.ImportPriceShock: applies P_I multiplier once at t=1 (now matches DDGABM exactly)
 
 # Shock instances (immutable structs, safe to reuse)
 const SHOCKS = Dict(
     :productivity => ProductivityShockOnce(1.10),       # +10% alpha_bar_i at t=1
-    :government   => GovSpendingShockPermanent(1.10),   # +10% via AR intercept shift
-    :import_price => Bit.ImportPriceShock(1.10, 100),   # +10% P_I at t=1 (DDGABM line 311)
+    :government   => GovSpendingShockPermanent(1.10),   # +10% C_G (handles both base & DDGABM)
+    :import_price => ImportPriceShockPermanent(1.10),   # +10% P_I (DDGABM) + _import_price_multiplier (base)
 )
+
+const IMPORT_PRICE_SHOCK_MULTIPLIER = 1.10
 
 # =====================================================
 # HELPER: Extract GDP series from model results
@@ -147,7 +201,8 @@ function extract_series(results::Vector{<:Bit.AbstractModel})
         real_hh_cons[i, :] = model.data.real_household_consumption
     end
 
-    # CPI = household consumption deflator (paper uses this, not GDP deflator)
+    # CPI = household consumption deflator (MATLAB shock_figure.m line 69)
+    # This is P_bar_HH = sum(b_HH_g .* P_bar_g), NOT the GDP deflator
     cpi = nominal_hh_cons ./ real_hh_cons
 
     return real_gdp, cpi
@@ -198,7 +253,11 @@ function compute_all_irfs(;
     println("  Runs: $n_runs")
     println("  Horizon: $T quarters")
 
-    p, ic = Bit.get_params_and_initial_conditions(cal, calibration_date; scale = 0.001)
+    # Wrap calibration in DDGABMCalibration so p/ic automatically include
+    # 6x6 covariance, deflator AR params, and growth-rate AR params
+    dcal = DDGABMCalibration(cal)
+    p, ic = Bit.get_params_and_initial_conditions(dcal, calibration_date; scale = 0.001)
+    println("  DDGABM params: C6 $(size(p["C6"])), deflator ARs added")
 
     all_irfs = Dict()
 
@@ -206,32 +265,26 @@ function compute_all_irfs(;
         println("\n=== Model: $model_type ===")
         model_irfs = Dict()
 
-        # Run baseline (no shock)
+        # Run baseline (no shock, no import price multiplier)
         print("  Baseline ... ")
+        _import_price_multiplier[] = 1.0
         model = MODEL_CREATORS[model_type](p, ic)
 
-        # Use custom ensemblerun for EUBI (with MATLAB-style gamma AR)
-        if model_type == :eubi
-            baseline_results = ensemblerun_eubi(model, T, n_runs)
-        else
-            baseline_results = Bit.ensemblerun(model, T, n_runs)
-        end
+        baseline_results = Bit.ensemblerun(model, T, n_runs)
         baseline_gdp, baseline_cpi = extract_series(baseline_results)
         println("done")
 
         for shock_type in shocks
             print("  Shock: $shock_type ... ")
 
+            # Set import price multiplier (only active for :import_price shock)
+            _import_price_multiplier[] = (shock_type == :import_price) ? IMPORT_PRICE_SHOCK_MULTIPLIER : 1.0
+
             # Create fresh model for shocked run
             model_shocked = MODEL_CREATORS[model_type](p, ic)
             shock = SHOCKS[shock_type]
 
-            # Use custom ensemblerun for EUBI (with MATLAB-style gamma AR)
-            if model_type == :eubi
-                shocked_results = ensemblerun_eubi(model_shocked, T, n_runs; shock=shock)
-            else
-                shocked_results = Bit.ensemblerun(model_shocked, T, n_runs; shock=shock)
-            end
+            shocked_results = Bit.ensemblerun(model_shocked, T, n_runs; shock=shock)
             shocked_gdp, shocked_cpi = extract_series(shocked_results)
 
             # Compute IRFs (no SE needed - paper doesn't show error bands)

@@ -27,12 +27,12 @@ function get_params_and_initial_conditions(calibration_object, calibration_date;
     ea["gdp_deflator_quarterly"] = ea["nominal_gdp_quarterly"] ./ ea["real_gdp_quarterly"]
 
 
-    T_calibration = findall(
-        calibration_data["years_num"] .== date2num(DateTime(year(min(calibration_date, max_calibration_date)), 12, 31)),
-    )[1][1]
-    T_calibration_quarterly = findall(calibration_data["quarters_num"] .== date2num(calibration_date))[1][2] # TODO: This indexing might not be correct
-    T_estimation_exo = findall(data["quarters_num"] .== date2num(estimation_date))[1][1]
-    T_calibration_exo = findall(data["quarters_num"] .== date2num(calibration_date))[1][1]
+    T_calibration = findfirst(
+        vec(calibration_data["years_num"]) .== date2num(DateTime(year(min(calibration_date, max_calibration_date)), 12, 31)),
+    )
+    T_calibration_quarterly = findfirst(vec(calibration_data["quarters_num"]) .== date2num(calibration_date))
+    T_estimation_exo = findfirst(vec(data["quarters_num"]) .== date2num(estimation_date))
+    T_calibration_exo = findfirst(vec(data["quarters_num"]) .== date2num(calibration_date))
     T_calibration_exo_max = length(data["quarters_num"])
     intermediate_consumption = figaro["intermediate_consumption"][:, :, T_calibration]
     G = size(intermediate_consumption)[1]

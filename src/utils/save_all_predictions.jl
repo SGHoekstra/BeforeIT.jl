@@ -38,11 +38,58 @@ function extract_yq(files)
     Set([match(r"^(\d{4})Q(\d)\.jld2$", f).match for f in files if occursin(r"Q", f)])
 end
 
-function save_all_simulations(folder_name; T= 12, n_sims = 4, simulation_suffix = "simulations")
+"""
+    save_all_simulations(folder_name; T=12, n_sims=4, model_factory=nothing, output_suffix=nothing)
 
+Run ensemble simulations for all parameter/initial_condition pairs and save results.
+
+# Arguments
+- `folder_name`: Base folder containing data (e.g., "data/nl")
+- `T`: Number of quarters to simulate (default: 12)
+- `n_sims`: Number of ensemble simulations (default: 4)
+- `model_factory`: Optional function `(parameters, initial_conditions) -> Model`.
+                   Must be defined at TOP LEVEL before calling this function.
+                   Example: include extension file at script level, then pass `create_model`.
+- `output_suffix`: Optional suffix for output folder (e.g., "growth_rate" → simulations_growth_rate/).
+                   Input is always read from standard `parameters/` and `initial_conditions/` folders.
+
+# Behavior
+- **No model_factory**: Uses standard `Bit.Model()`, saves to `simulations/`
+- **With model_factory**: Calls `model_factory(p, ic)`, saves to `simulations_{output_suffix}/`
+
+# Examples
+```julia
+# Standard model (baseline)
+Bit.save_all_simulations("data/nl"; T=12, n_sims=100)
+
+# GrowthRateAR1 extension - include at TOP LEVEL first!
+include("examples/GrowthRateAR1_extension.jl")  # At script top level
+Bit.save_all_simulations("data/nl";
+    T=12, n_sims=100,
+    model_factory=create_model,
+    output_suffix="growth_rate"
+)
+```
+
+# Note on Julia World-Age
+Extensions MUST be included at the TOP LEVEL of your script (not inside functions).
+This ensures method dispatch works correctly. The `model_factory` parameter receives
+the already-defined function rather than a file path to include.
+"""
+function save_all_simulations(folder_name; T=12, n_sims=4, model_factory=nothing, output_suffix=nothing)
+    # Always read from standard folders
     param_dir = folder_name * "/parameters/"
-    init_dir = folder_name *"/initial_conditions/"
-    sim_dir = folder_name * "/$(simulation_suffix)/"
+    init_dir = folder_name * "/initial_conditions/"
+
+    # Output folder depends on suffix
+    if output_suffix !== nothing
+        sim_dir = folder_name * "/simulations_$(output_suffix)/"
+    else
+        sim_dir = folder_name * "/simulations/"
+    end
+
+    # Ensure simulation directory exists
+    mkpath(sim_dir)
 
     param_files = readdir(param_dir)
     init_files = readdir(init_dir)
@@ -59,15 +106,25 @@ function save_all_simulations(folder_name; T= 12, n_sims = 4, simulation_suffix 
         param_file = joinpath(param_dir, string(year, "Q", quarter, ".jld2"))
         init_file = joinpath(init_dir, string(year, "Q", quarter, ".jld2"))
 
-        parameters = load(param_file)
-        initial_conditions = load(init_file)
-        
-        model = Bit.Model(parameters, initial_conditions)
-        model_vector = Bit.ensemblerun(model, T, n_sims)
-        data_vector = DataVector(model_vector)
-        sim_file = joinpath(sim_dir, string(year, "Q", quarter, ".jld2"))
-        
-        save(sim_file, "data_vector", data_vector)
+        try
+            parameters = load(param_file)
+            initial_conditions = load(init_file)
+
+            # Use model_factory if provided, else standard Model
+            if model_factory !== nothing
+                model = model_factory(parameters, initial_conditions)
+            else
+                model = Bit.Model(parameters, initial_conditions)
+            end
+
+            model_vector = Bit.ensemblerun(model, T, n_sims)
+            data_vector = DataVector(model_vector)
+            sim_file = joinpath(sim_dir, string(year, "Q", quarter, ".jld2"))
+
+            save(sim_file, "data_vector", data_vector)
+        catch e
+            @warn "Skipping $(year)Q$(quarter) due to error: $e"
+        end
     end
 end
 

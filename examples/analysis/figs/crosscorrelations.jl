@@ -1,5 +1,8 @@
 # Single-Country Cross-Correlation Analysis
 # Creates cross-correlation and autocorrelation plots for a single country
+#
+# Supports base model and extension variants (e.g., CANVAS, GrowthRateAR1).
+# Set MODEL_VARIANT, PREDICTION_FOLDER, and EXTENSION_FILE below.
 
 using StatsBase, LinearAlgebra, Statistics, Dates
 using Plots, JLD2, FileIO
@@ -25,15 +28,39 @@ PLOT_VARIABLES = [
 ]
 
 # =============================================================================
+# MODEL VARIANT CONFIGURATION
+# =============================================================================
+# Change these to run analysis for different model variants.
+# Output will be saved to: analysis/figs/{country}/{MODEL_VARIANT}/
+#
+# Options:
+#   MODEL_VARIANT = "base"           PREDICTION_FOLDER = "abm_predictions"               EXTENSION_FILE = nothing
+#   MODEL_VARIANT = "growth_rate"    PREDICTION_FOLDER = "abm_predictions_growth_rate"   EXTENSION_FILE = "../../GrowthRateAR1_extension.jl"
+#   MODEL_VARIANT = "canvas"         PREDICTION_FOLDER = "abm_predictions_canvas"        EXTENSION_FILE = "../../CANVAS_extension.jl"
+
+MODEL_VARIANT = "canvas"
+PREDICTION_FOLDER = "abm_predictions_canvas"
+EXTENSION_FILE = "../../CANVAS_extension.jl"
+
+# =============================================================================
+# EXTENSION INCLUDE (must be at top level for method dispatch)
+# =============================================================================
+
+if EXTENSION_FILE !== nothing
+    include(joinpath(@__DIR__, EXTENSION_FILE))
+    @info "Loaded extension: $EXTENSION_FILE (variant: $MODEL_VARIANT)"
+end
+
+# =============================================================================
 # MAIN SCRIPT
 # =============================================================================
 
-@info "Cross-Correlation Analysis for $COUNTRY"
+@info "Cross-Correlation Analysis for $COUNTRY (variant: $MODEL_VARIANT)"
 
 calibration = Bit.load_calibration_data(COUNTRY)
 real_data = calibration.data
-folder = "data/$(COUNTRY)/abm_predictions"
-output_folder = "analysis/figs/$(COUNTRY)"
+folder = "data/$(COUNTRY)/$(PREDICTION_FOLDER)"
+output_folder = "analysis/figs/$(COUNTRY)/$(MODEL_VARIANT)"
 mkpath(output_folder)
 
 # Load prediction files

@@ -20,17 +20,21 @@ import BeforeIT as Bit
 using Dates, Statistics, DataFrames, CSV, JLD2
 using Plots, StatsPlots
 
-# Include the FULL model extensions (exact MATLAB matching)
-include("CANVAS_full_extension.jl")
-include("CATS_full_extension.jl")
-include("EUBI_full_extension.jl")
-include("KS_full_extension.jl")
+# Make CalibrationData available in Main so JLD2 can deserialize it
+# (the .jld2 files store the type as Main.CalibrationData)
+const CalibrationData = Bit.CalibrationData
+
+# Include model extensions (exact MATLAB matching)
+include("CANVAS_extension.jl")
+include("CATS_extension.jl")
+include("EUBI_extension.jl")
+include("KS_extension.jl")
 
 # =====================================================
 # CONFIGURATION
 # =====================================================
-# Note: All model creators (create_full_canvas_model, create_full_cats_model, etc.)
-# are now defined in the included Full extension files with exact MATLAB matching
+# Note: All model creators (create_canvas_model, create_cats_model, etc.)
+# are defined in the included extension files with exact MATLAB matching
 
 function create_standard_model(p, ic)
     w_act, w_inact = Bit.Workers(p, ic)
@@ -47,10 +51,10 @@ end
 
 const MODEL_CREATORS = Dict(
     :standard => create_standard_model,
-    :canvas => create_full_canvas_model,  # Full CANVAS with exact MATLAB matching
-    :cats => create_full_cats_model,      # Full CATS with exact MATLAB matching
-    :eubi => create_full_eubi_model,      # Full EUBI with exact MATLAB matching
-    :ks => create_full_ks_model,          # Full KS with exact MATLAB matching
+    :canvas => create_canvas_model,
+    :cats => create_cats_model,
+    :eubi => create_eubi_model,
+    :ks => create_ks_model,
 )
 
 # =====================================================
@@ -118,6 +122,9 @@ function run_forecasting_comparison(;
     T = 12,           # Forecast horizon (quarters)
     models = [:standard, :canvas, :cats, :eubi, :ks]
 )
+    # Wrap calibration so DDGABM params (C6, deflator ARs) are auto-included
+    dcal = DDGABMCalibration(cal)
+
     # Generate reference quarters (quarter-end dates)
     quarters = []
     for year in start_year:end_year
@@ -144,7 +151,7 @@ function run_forecasting_comparison(;
             print("  Quarter $q_idx/$(length(quarters)): $quarter ... ")
 
             try
-                p, ic = Bit.get_params_and_initial_conditions(cal, quarter; scale = 0.001)
+                p, ic = Bit.get_params_and_initial_conditions(dcal, quarter; scale = 0.001)
                 model = MODEL_CREATORS[model_type](p, ic)
                 results = Bit.ensemblerun(model, T, n_runs)
                 series = extract_series(results)

@@ -53,21 +53,23 @@ function calculate_forecast_errors(forecast, actual)
     return rmse, bias, error
 end
 
-function write_latex_table(filename, country, input_data_S, horizons)
+function write_latex_table(filename, country, input_data_S, horizons; model_variant::String="base")
     tableRowLabels = ["$(i)q" for i in horizons]
     dataFormat, tableColumnAlignment = "%.2f", "r"
     tableBorders, booktabs, makeCompleteLatexDocument = false, false, false
 
     latex = latexTableContent(input_data_S, tableRowLabels, dataFormat, tableColumnAlignment, tableBorders, booktabs, makeCompleteLatexDocument)
 
-    open("data/$(country)/analysis/$(filename)", "w") do fid
+    analysis_dir = "data/$(country)/analysis/$(model_variant)"
+    mkpath(analysis_dir)
+    open("$(analysis_dir)/$(filename)", "w") do fid
         for line in latex
             write(fid, line * "\n")
         end
     end
 end
 
-function write_csv_table(filename, country, input_data, horizons, number_variables)
+function write_csv_table(filename, country, input_data, horizons, number_variables; model_variant::String="base")
     """
     Write table data to CSV format for easy programmatic access.
 
@@ -77,6 +79,7 @@ function write_csv_table(filename, country, input_data, horizons, number_variabl
     - `input_data`: Matrix of numerical values (horizons × variables)
     - `horizons`: Vector of forecast horizons
     - `number_variables`: Number of variables (5 for base, 8 for validation)
+    - `model_variant`: Subfolder for different model variants (default: "base")
     """
 
     # Variable names based on number of variables
@@ -86,7 +89,7 @@ function write_csv_table(filename, country, input_data, horizons, number_variabl
         variable_names = ["Real GDP", "GDP Deflator Growth", "Real Gov Consumption", "Real Exports", "Real Imports", "Real GDP (EA)", "GDP Deflator Growth (EA)", "Euribor"]
     else
         # Fallback for other cases
-        variable_names = ["$(model_type)$i" for i in 1:number_variables]
+        variable_names = ["Var$i" for i in 1:number_variables]
     end
 
     # Create DataFrame with proper structure
@@ -105,7 +108,9 @@ function write_csv_table(filename, country, input_data, horizons, number_variabl
     end
 
     # Write CSV file
-    csv_path = "data/$(country)/analysis/$(filename)"
+    analysis_dir = "data/$(country)/analysis/$(model_variant)"
+    mkpath(analysis_dir)
+    csv_path = "$(analysis_dir)/$(filename)"
     CSV.write(csv_path, df)
 
     @info "Saved CSV table: $csv_path"
@@ -143,72 +148,85 @@ function generate_mz_test_bias(error, actual, bias, horizons, number_variables)
     return input_data_S
 end
 
-function create_bias_rmse_tables_abm(forecast, actual, horizons, type, number_variables, country)
+function create_bias_rmse_tables_abm(forecast, actual, horizons, type, number_variables, country; model_variant::String="base")
     type_prefix = type == "validation" ? "validation_" : ""
+    comparison_model = type == "validation" ? "var" : "ar"
 
-    if type == "validation"
-        comparison_model = "var"
-    else
-        comparison_model = "ar"
-    end
-    
     rmse_abm, bias_abm, error_abm = calculate_forecast_errors(forecast, actual)
 
-    forecast_var = load("data/$(country)/analysis/forecast_$(type_prefix)$(comparison_model).jld2")["forecast"]
-    rmse_var, _, error_var = calculate_forecast_errors(forecast_var, actual)
+    # 1. Save ABSOLUTE RMSE
+    rmse_abs_numeric = round.(rmse_abm, digits=2)
+    write_csv_table("rmse_$(type_prefix)abm.csv", country, rmse_abs_numeric, horizons, number_variables; model_variant=model_variant)
+    write_latex_table("rmse_$(type_prefix)abm.tex", country, string.(rmse_abs_numeric), horizons; model_variant=model_variant)
 
-    # Save RMSE comparison data (ABM vs $(model_type))
-    rmse_comparison_data_latex = generate_dm_test_comparison(error_abm, error_var, rmse_abm, rmse_var, horizons, number_variables)
-    write_latex_table("rmse_$(type_prefix)abm.tex", country, rmse_comparison_data_latex, horizons)
+    # 2. Save RELATIVE TO AR/VAR benchmark
+    base_analysis_dir = "data/$(country)/analysis/base"
+    forecast_benchmark = load("$(base_analysis_dir)/forecast_$(type_prefix)$(comparison_model).jld2")["forecast"]
+    rmse_benchmark, _, error_benchmark = calculate_forecast_errors(forecast_benchmark, actual)
 
-    # For CSV, save just the numerical comparison values (percentage improvement)
-    rmse_comparison_data_numeric = -round.(100 * (rmse_abm .- rmse_var) ./ rmse_var, digits=1)
-    write_csv_table("rmse_$(type_prefix)abm.csv", country, rmse_comparison_data_numeric, horizons, number_variables)
+    rmse_vs_benchmark_latex = generate_dm_test_comparison(error_abm, error_benchmark, rmse_abm, rmse_benchmark, horizons, number_variables)
+    write_latex_table("rmse_$(type_prefix)abm_vs_$(comparison_model).tex", country, rmse_vs_benchmark_latex, horizons; model_variant=model_variant)
 
-    # Save bias data
+    rmse_vs_benchmark_numeric = -round.(100 * (rmse_abm .- rmse_benchmark) ./ rmse_benchmark, digits=1)
+    write_csv_table("rmse_$(type_prefix)abm_vs_$(comparison_model).csv", country, rmse_vs_benchmark_numeric, horizons, number_variables; model_variant=model_variant)
+
+    # 3. Save VARIANT VS BASE ABM (only for non-base variants)
+    if model_variant != "base"
+        forecast_base_abm = load("$(base_analysis_dir)/forecast_$(type_prefix)abm.jld2")["forecast"]
+        rmse_base_abm, _, error_base_abm = calculate_forecast_errors(forecast_base_abm, actual)
+
+        rmse_vs_base_latex = generate_dm_test_comparison(error_abm, error_base_abm, rmse_abm, rmse_base_abm, horizons, number_variables)
+        write_latex_table("rmse_$(type_prefix)abm_vs_base.tex", country, rmse_vs_base_latex, horizons; model_variant=model_variant)
+
+        rmse_vs_base_numeric = -round.(100 * (rmse_abm .- rmse_base_abm) ./ rmse_base_abm, digits=1)
+        write_csv_table("rmse_$(type_prefix)abm_vs_base.csv", country, rmse_vs_base_numeric, horizons, number_variables; model_variant=model_variant)
+    end
+
+    # 4. Save bias (unchanged — already absolute)
     bias_data_latex = generate_mz_test_bias(error_abm, actual, bias_abm, horizons, number_variables)
-    write_latex_table("bias_$(type_prefix)abm.tex", country, bias_data_latex, horizons)
+    write_latex_table("bias_$(type_prefix)abm.tex", country, bias_data_latex, horizons; model_variant=model_variant)
 
-    # For CSV, save just the numerical bias values (without p-values and stars)
     bias_data_numeric = round.(bias_abm, digits=4)
-    write_csv_table("bias_$(type_prefix)abm.csv", country, bias_data_numeric, horizons, number_variables)
+    write_csv_table("bias_$(type_prefix)abm.csv", country, bias_data_numeric, horizons, number_variables; model_variant=model_variant)
 
     return nothing
 end
 
-function create_bias_rmse_tables_var(forecast, actual, horizons, forecast_type, model_type, number_variables, k, country)
+function create_bias_rmse_tables_var(forecast, actual, horizons, forecast_type, model_type, number_variables, k, country; model_variant::String="base")
     type_prefix = forecast_type == "validation" ? "validation_" : ""
+    analysis_dir = "data/$(country)/analysis/$(model_variant)"
+    mkpath(analysis_dir)
 
     if k == 1
-        save("data/$(country)/analysis/forecast_$(type_prefix)$(model_type).jld2", "forecast", forecast)
+        save("$(analysis_dir)/forecast_$(type_prefix)$(model_type).jld2", "forecast", forecast)
         rmse_var, bias_var, error_var = calculate_forecast_errors(forecast, actual)
 
         # Save RMSE data
         input_data_rmse = round.(rmse_var, digits=2)
-        write_latex_table("rmse_$(type_prefix)$(model_type).tex", country, string.(input_data_rmse), horizons)
-        write_csv_table("rmse_$(type_prefix)$(model_type).csv", country, input_data_rmse, horizons, number_variables)
+        write_latex_table("rmse_$(type_prefix)$(model_type).tex", country, string.(input_data_rmse), horizons; model_variant=model_variant)
+        write_csv_table("rmse_$(type_prefix)$(model_type).csv", country, input_data_rmse, horizons, number_variables; model_variant=model_variant)
 
         # Save bias data
         bias_data_latex = generate_mz_test_bias(error_var, actual, bias_var, horizons, number_variables)
-        write_latex_table("bias_$(type_prefix)$(model_type).tex", country, bias_data_latex, horizons)
+        write_latex_table("bias_$(type_prefix)$(model_type).tex", country, bias_data_latex, horizons; model_variant=model_variant)
 
         # For CSV, save just the numerical bias values (without p-values and stars)
         bias_data_numeric = round.(bias_var, digits=4)
-        write_csv_table("bias_$(type_prefix)$(model_type).csv", country, bias_data_numeric, horizons, number_variables)
+        write_csv_table("bias_$(type_prefix)$(model_type).csv", country, bias_data_numeric, horizons, number_variables; model_variant=model_variant)
 
     else
-        save("data/$(country)/analysis/forecast_$(type_prefix)$(model_type)_$(k).jld2", "forecast", forecast)
+        save("$(analysis_dir)/forecast_$(type_prefix)$(model_type)_$(k).jld2", "forecast", forecast)
         rmse_var_k, _, error_var_k = calculate_forecast_errors(forecast, actual)
 
-        forecast_base_var = load("data/$(country)/analysis/forecast_$(type_prefix)$(model_type).jld2")["forecast"]
+        forecast_base_var = load("$(analysis_dir)/forecast_$(type_prefix)$(model_type).jld2")["forecast"]
         rmse_base_var, _, error_base_var = calculate_forecast_errors(forecast_base_var, actual)
 
         # Generate comparison data for LaTeX (with p-values and stars)
         rmse_comparison_data_latex = generate_dm_test_comparison(error_var_k, error_base_var, rmse_var_k, rmse_base_var, horizons, number_variables)
-        write_latex_table("rmse_$(type_prefix)$(model_type)_$(k).tex", country, rmse_comparison_data_latex, horizons)
+        write_latex_table("rmse_$(type_prefix)$(model_type)_$(k).tex", country, rmse_comparison_data_latex, horizons; model_variant=model_variant)
 
         # For CSV, save just the numerical comparison values (percentage improvement)
         rmse_comparison_data_numeric = -round.(100 * (rmse_var_k .- rmse_base_var) ./ rmse_base_var, digits=1)
-        write_csv_table("rmse_$(type_prefix)$(model_type)_$(k).csv", country, rmse_comparison_data_numeric, horizons, number_variables)
+        write_csv_table("rmse_$(type_prefix)$(model_type)_$(k).csv", country, rmse_comparison_data_numeric, horizons, number_variables; model_variant=model_variant)
     end
 end

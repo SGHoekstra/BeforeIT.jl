@@ -82,3 +82,8 @@ Temporary Items
 *.icloud
 
 .vscode/settings.json
+
+#local work
+./examples/paper_figures
+figure2_forecasting.png
+figure3_shocks.png

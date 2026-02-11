@@ -39,6 +39,37 @@ function hpfilter(y; λ = 1600.0)
 end
 
 """
+    winsorize_growth_rates(x; lower_pct=5.0, upper_pct=95.0)
+
+Winsorize a time series by capping extreme quarterly growth rates at specified percentiles,
+then reconstructing levels. Useful for smoothing investment data in countries with volatile
+national accounts (e.g., Ireland, Netherlands) due to multinational profit-shifting.
+
+# Arguments
+- `x`: Time series of levels (must be positive for log transformation)
+- `lower_pct`: Lower percentile for capping (default 5.0)
+- `upper_pct`: Upper percentile for capping (default 95.0)
+
+# Returns
+- Smoothed series with the same length as input, preserving the initial level
+"""
+function winsorize_growth_rates(x::AbstractVector{<:Real}; lower_pct::Real=5.0, upper_pct::Real=95.0)
+    n = length(x)
+    n <= 2 && return Float64.(x)
+
+    log_x = log.(x)
+    g = diff(log_x)
+
+    lower_threshold = percentile(g, lower_pct)
+    upper_threshold = percentile(g, upper_pct)
+
+    g_winsorized = clamp.(g, lower_threshold, upper_threshold)
+    log_smoothed = vcat(log_x[1], log_x[1] .+ cumsum(g_winsorized))
+
+    return exp.(log_smoothed)
+end
+
+"""
     crosscor(x, y, maxlag = 0)
 
 Cross-correlation function with normalization, similar to MATLAB's xcorr.
@@ -254,6 +285,10 @@ Create HP filter cache for real data to avoid recomputation.
 # Returns
 - `cache`: Dict with cached HP filter results
 """
+# Strip Missing values from a vector for HP filtering (requires contiguous numeric data)
+strip_missing(y::Vector{Float64}) = y
+strip_missing(y) = Float64.(collect(skipmissing(y)))
+
 function create_hp_filter_cache(real_data, variable_names, max_sectors = 10)
     @info "Creating HP filter cache for real data"
 
@@ -262,7 +297,7 @@ function create_hp_filter_cache(real_data, variable_names, max_sectors = 10)
     # Cache GDP data first (used as reference)
     for gdp_var in ["real_gdp_quarterly", "real_gdp"]
         if haskey(real_data, gdp_var)
-            trend, cycle = hpfilter(real_data[gdp_var])
+            trend, cycle = hpfilter(strip_missing(real_data[gdp_var]))
             cache[gdp_var] = (trend, cycle)
         end
     end
@@ -271,13 +306,13 @@ function create_hp_filter_cache(real_data, variable_names, max_sectors = 10)
     for name in variable_names
         if haskey(real_data, name)
             if ndims(real_data[name]) == 1
-                trend, cycle = hpfilter(real_data[name])
+                trend, cycle = hpfilter(strip_missing(real_data[name]))
                 cache[name] = (trend, cycle)
             else
                 cache[name] = Dict{Int, Tuple{Vector{Float64}, Vector{Float64}}}()
                 n_sectors = min(max_sectors, size(real_data[name], 2))
                 for sector in 1:n_sectors
-                    trend, cycle = hpfilter(real_data[name][:, sector])
+                    trend, cycle = hpfilter(strip_missing(real_data[name][:, sector]))
                     cache[name][sector] = (trend, cycle)
                 end
             end
@@ -333,7 +368,7 @@ function process_real_1d_variable!(crosscorr_data, autocorr_data, stderr_data, r
 
     crosscorr_data[name] = crosscor(gdp_cycle_adj, cycle, correlation_lags)
     autocorr_data[name] = autocor(cycle, 0:autocorr_lags)
-    stderr_data[name] = std(real_data[name])
+    stderr_data[name] = std(strip_missing(real_data[name]))
 end
 
 """
@@ -724,21 +759,28 @@ function calculate_statistics(crosscorr, autocorr, cyclesvar, variable_names, ma
             std_xcorr[name] = std(crosscorr[name], dims=2)
             mean_autocorr[name] = mean(autocorr[name], dims=2)
             std_autocorr[name] = std(autocorr[name], dims=2)
-            mean_cyclesvar[name] = mean(cyclesvar[name])
+            if haskey(cyclesvar, name)
+                mean_cyclesvar[name] = mean(cyclesvar[name])
+            end
         else
             # 3D case - aggregate over sectors
             mean_xcorr[name] = zeros(size(crosscorr[name], 1), max_sectors)
             std_xcorr[name] = zeros(size(crosscorr[name], 1), max_sectors)
             mean_autocorr[name] = zeros(default_horizon + 1, max_sectors)
             std_autocorr[name] = zeros(default_horizon + 1, max_sectors)
-            mean_cyclesvar[name] = zeros(1, max_sectors)
+
+            if haskey(cyclesvar, name)
+                mean_cyclesvar[name] = zeros(1, max_sectors)
+            end
 
             for sector in 1:max_sectors
                 mean_xcorr[name][:, sector] = mean(crosscorr[name][:, :, sector], dims=2)
                 std_xcorr[name][:, sector] = std(crosscorr[name][:, :, sector], dims=2)
                 mean_autocorr[name][:, sector] = mean(autocorr[name][:, :, sector], dims=2)
                 std_autocorr[name][:, sector] = std(autocorr[name][:, :, sector], dims=2)
-                mean_cyclesvar[name][sector] = mean(cyclesvar[name][:, sector])
+                if haskey(cyclesvar, name)
+                    mean_cyclesvar[name][sector] = mean(cyclesvar[name][:, sector])
+                end
             end
         end
     end

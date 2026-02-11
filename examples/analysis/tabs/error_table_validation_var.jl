@@ -1,5 +1,5 @@
 
-function error_table_validation_var(country::String, ea, data, quarters, horizons)
+function error_table_validation_var(country::String, ea, data, quarters, horizons; model_variant::String="base")
 
     quarters_num = Bit.date2num.(quarters)
     number_quarters = length(quarters)
@@ -22,6 +22,9 @@ function error_table_validation_var(country::String, ea, data, quarters, horizon
 
                 forecast_quarter_num = Bit.date2num(lastdayofmonth(Bit.num2date(quarter_num) + Month(3 * horizon)))
                 Bit.num2date(forecast_quarter_num) > Date(max_year, 12, 31) && break
+
+                # Skip if actual data doesn't cover this forecast quarter
+                any(data["quarters_num"] .== forecast_quarter_num) || continue
 
                 actual[i, j, :] = hcat(
                     log.(data["real_gdp_quarterly"][data["quarters_num"] .== forecast_quarter_num]),
@@ -53,7 +56,7 @@ function error_table_validation_var(country::String, ea, data, quarters, horizon
             end
         end
 
-        create_bias_rmse_tables_var(forecast, actual, horizons, "validation", "var", number_variables, k, country)
+        create_bias_rmse_tables_var(forecast, actual, horizons, "validation", "var", number_variables, k, country; model_variant=model_variant)
     end
     return nothing
 end
