@@ -2,11 +2,14 @@ module BeforeIT
 
 import Base: length
 
+using CSV
+using DataFrames
 using LazyArrays
 using LinearAlgebra
 using MacroTools
 using Preferences
 using Random
+using Statistics
 using StatsBase
 using WeightVectors
 
@@ -74,10 +77,12 @@ include("utils/toannual.jl")
 include("utils/get_predictions_from_sims.jl")
 include("utils/dmtest.jl")
 include("utils/mztest.jl")
+include("utils/bias_ttest.jl")
 include("utils/varx.jl")
 include("utils/modify.jl")
 include("utils/diff_transform.jl")
 include("utils/misc.jl")
+include("utils/correlation_utils.jl")
 
 # calibration
 include("utils/calibration.jl")
@@ -96,6 +101,11 @@ include("shocks/shocks.jl")
 
 # model extensions
 include("model_extensions/init_CANVAS.jl")
+include("model_extensions/init_growth_rate_model.jl")
+
+# forecast error analysis
+include("utils/analysis_utils.jl")
+include("utils/error_tables.jl")
 
 # external functions definitions
 include("utils/extensions.jl")
